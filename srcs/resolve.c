@@ -5,6 +5,13 @@
 ** getaddrinfo handles both cases (DNS lookup or plain numeric parse).
 ** We ask only for IPv4 (AF_INET) as the subject requires.
 */
+
+//getaddrinfo   (ping->host - &hints) -> (&res)
+// getaddrinfo: take user input written address (ping->host) and "hints" to check options and fill res with output
+// If user input from ping->host is not yet ipv4, it does a real hostname resolution (DNS and stuff) (skipped if already ipv4)
+//
+// then convert ip to binary
+// it check &ping->addr.sin_addr that was filled by getaddrinfo, and put output in ping->ip_str
 int	resolve_host(t_ping *ping)
 {
 	struct addrinfo	hints;
@@ -15,6 +22,7 @@ int	resolve_host(t_ping *ping)
 	hints.ai_socktype = SOCK_RAW;
 	hints.ai_protocol = IPPROTO_ICMP;
 
+	// getaddrinfo: take user input written address (ping->host) and "hints" to check options and fill res with output
 	if (getaddrinfo(ping->host, NULL, &hints, &res) != 0)
 	{
 		fprintf(stderr, "ft_ping: unknown host\n");
