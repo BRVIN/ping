@@ -43,14 +43,22 @@ unsigned short	checksum(void *data, int len)
 ** Storing the send time inside the packet means the reply carries it back
 ** to us (the target echoes the data unchanged): RTT = now - that time.
 */
-void	build_packet(t_ping *ping, char *buf, int seq)
+
+
+// RFC792 define ICMP header
+// check obs ICMP file
+// we use id to identify our ping and seq to differentiate the packets we send
+// internet protocols often use big endian byte order as defined for ICMP in the RFC, and most modern cpu use little endian
+// that s why the variables above 1 byte (id and sequence) need htons convertion (not the checksum for some magic shit)
+
+void	build_packet(t_ping *ping, char *packet, int seq)
 {
 	struct icmphdr	*icmp;
 	struct timeval	tv;
 	int				i;
 
-	memset(buf, 0, PACKET_LEN);
-	icmp = (struct icmphdr *)buf;
+	memset(packet, 0, PACKET_LEN);
+	icmp = (struct icmphdr *)packet;
 	icmp->type = ICMP_ECHO;         /* 8 = echo request */
 	icmp->code = 0;
 	/* Network byte order (big endian) for multi-byte fields: htons */
@@ -59,15 +67,15 @@ void	build_packet(t_ping *ping, char *buf, int seq)
 
 	/* Data part: timestamp first, then a recognisable pattern */
 	gettimeofday(&tv, NULL);
-	memcpy(buf + ICMP_HDR_LEN, &tv, sizeof(tv));
+	memcpy(packet + ICMP_HDR_LEN, &tv, sizeof(tv));
 	i = ICMP_HDR_LEN + sizeof(tv);
 	while (i < PACKET_LEN)
 	{
-		buf[i] = i;
+		packet[i] = i;
 		i++;
 	}
 
 	/* Checksum is computed LAST, with the checksum field still at 0 */
 	icmp->checksum = 0;
-	icmp->checksum = checksum(buf, PACKET_LEN);
+	icmp->checksum = checksum(packet, PACKET_LEN);
 }
