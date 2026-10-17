@@ -25,6 +25,10 @@ void	send_ping(t_ping *ping, int seq)
 ** The IP header length is variable: ihl = number of 32-bit words,
 ** so its size in bytes is ihl * 4.
 */
+
+//recv_ping
+//
+//  ip->ihl * 4 : Internet Header Length is the length of the internet header in 32 bit word, so we multiply * 4 to get byte size
 void	recv_ping(t_ping *ping)
 {
 	char				buf[1024];
