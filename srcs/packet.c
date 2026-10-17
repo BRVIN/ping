@@ -8,6 +8,8 @@
 ** The receiver does the same sum over the whole packet (checksum included)
 ** and must get 0xFFFF; that is how corruption is detected.
 */
+
+// to deepen
 unsigned short	checksum(void *data, int len)
 {
 	unsigned short	*p;
@@ -47,6 +49,7 @@ unsigned short	checksum(void *data, int len)
 
 // RFC792 define ICMP header
 // check obs ICMP file
+// We fill "packet" with the data of the icmp header
 // we use id to identify our ping and seq to differentiate the packets we send
 // internet protocols often use big endian byte order as defined for ICMP in the RFC, and most modern cpu use little endian
 // that s why the variables above 1 byte (id and sequence) need htons convertion (not the checksum for some magic shit)
@@ -69,6 +72,7 @@ void	build_packet(t_ping *ping, char *packet, int seq)
 	gettimeofday(&tv, NULL);
 	memcpy(packet + ICMP_HDR_LEN, &tv, sizeof(tv));
 	i = ICMP_HDR_LEN + sizeof(tv);
+	// Filling the rest of data part with just an incremental number sequence ... :
 	while (i < PACKET_LEN)
 	{
 		packet[i] = i;
