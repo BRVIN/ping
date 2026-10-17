@@ -6,7 +6,9 @@ CFLAGS	= -Wall -Wextra -Werror -Iincludes
 SRCS	= srcs/main.c \
 		  srcs/resolve.c \
 		  srcs/packet.c \
-		  srcs/ping.c
+		  srcs/ping.c \
+		  srcs/time.c \
+		  srcs/stats.c
 OBJS	= $(SRCS:.c=.o)
 
 all: $(NAME)

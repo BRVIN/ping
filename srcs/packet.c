@@ -73,9 +73,10 @@ void	build_packet(t_ping *ping, char *packet, int seq)
 	memcpy(packet + ICMP_HDR_LEN, &tv, sizeof(tv));
 	i = ICMP_HDR_LEN + sizeof(tv);
 	// Filling the rest of data part with just an incremental number sequence ... :
+	// (counting from 0 after the timeval, like inetutils: 00 01 02 ... 27)
 	while (i < PACKET_LEN)
 	{
-		packet[i] = i;
+		packet[i] = i - (ICMP_HDR_LEN + sizeof(tv));
 		i++;
 	}
 
