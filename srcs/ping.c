@@ -112,8 +112,22 @@ void	recv_ping(t_ping *ping)
 		return ;
 	icmp = (struct icmphdr *)(buf + ip_hlen);
 
-	/* Not an echo reply, or not for us (another process): skip it */
-	if (icmp->type != ICMP_ECHOREPLY || ntohs(icmp->un.echo.id) != ping->id)
+	/*
+	** Requests (our own ones, seen on loopback): skip them.
+	** Timestamp / address mask replies answer requests we never send.
+	*/
+	if (icmp->type == ICMP_ECHO || icmp->type == ICMP_TIMESTAMP
+		|| icmp->type == ICMP_ADDRESS || icmp->type == ICMP_TIMESTAMPREPLY
+		|| icmp->type == ICMP_ADDRESSREPLY)
+		return ;
+	/* Anything else than a reply: maybe an error about one of our packets */
+	if (icmp->type != ICMP_ECHOREPLY)
+	{
+		handle_icmp_error(ping, buf, n, ip_hlen, &from);
+		return ;
+	}
+	/* Echo reply for another process: skip it */
+	if (ntohs(icmp->un.echo.id) != ping->id)
 		return ;
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent))
 		return ;

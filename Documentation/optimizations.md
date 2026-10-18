@@ -292,6 +292,29 @@ immediacy.
 
 ---
 
+## 13. Table-driven message lookup
+
+**In simple words.** Instead of a long chain of `if`/`switch` saying "if type 3 code 1, print *Destination Host Unreachable*; if type 3 code 2, …", we write all the messages once in a **table** (type, code, text) and a tiny loop looks up the right line. Adding or fixing a message means editing one line of data, not code.
+
+**Where**: both. ft_ping `icmp_error.c`: table `g_codes` and `print_code_message`.
+
+**Idea.** Each row is `{type, code, text}`. The loop walks the rows and prints the text of the first
+one matching the received type and code. No match → the fallback
+`<prefix>, Unknown Code: <code>` (e.g. `Dest Unreachable, Unknown Code: 9`).
+
+**Why.** Messages are data, separated from logic: easy to read, easy to compare with the inetutils
+list, and a missing entry naturally falls into the "unknown" case.
+
+**Limit.** Linear search, but on 20 rows, once per error packet: negligible. A table indexed directly
+by code would be faster but needs holes for missing codes (9 and 10 are absent on purpose).
+
+**Plain version.** A `switch` on type, then a `switch` on code with one `printf` per case.
+
+**ft_ping.** Used for Dest Unreachable / Redirect / Time Exceeded codes. The other types (only a
+handful) are an `if` chain in `handle_icmp_error`.
+
+---
+
 ## Summary
 
 | # | Technique | Where in ft_ping | Also in inetutils |
@@ -308,3 +331,4 @@ immediacy.
 | 10 | Line buffering | `main.c` | ✔ |
 | 11 | Integer loss % | `stats.c` `print_stats` | ✔ |
 | 12 | `MSG_DONTWAIT` after `select` | `ping.c` `recv_ping` | ✘ |
+| 13 | Table-driven message lookup | `icmp_error.c` `print_code_message` | ✔ |

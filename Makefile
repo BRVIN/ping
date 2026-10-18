@@ -7,6 +7,7 @@ SRCS	= srcs/main.c \
 		  srcs/resolve.c \
 		  srcs/packet.c \
 		  srcs/ping.c \
+		  srcs/icmp_error.c \
 		  srcs/loop.c \
 		  srcs/stats.c
 OBJS	= $(SRCS:.c=.o)
