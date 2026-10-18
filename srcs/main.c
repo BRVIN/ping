@@ -9,14 +9,12 @@ int	main(int argc, char **argv)
 		fprintf(stderr, "usage: %s <host>\n", argv[0]);
 		return (1);
 	}
-	/* Print each line immediately, even when stdout is a pipe */
+	//setvbuf: to have output always print directly, it's like doing fflush(stdout) after every print
 	setvbuf(stdout, NULL, _IOLBF, 0);
 	memset(&ping, 0, sizeof(ping));
 	ping.host = argv[1];
-	/*
-	** The ICMP "identifier" field lets us recognise our own replies.
-	** It is 16 bits, so we keep only the low 16 bits of the pid.
-	*/
+
+	// ICMP "identifier" to recognise our replies (ping replies go for any app listening)
 	ping.id = getpid() & 0xFFFF;
 
 	/* 1. hostname / IP string -> struct sockaddr_in */

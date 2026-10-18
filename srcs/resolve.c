@@ -32,7 +32,9 @@ int	resolve_host(t_ping *ping)
 	struct addrinfo	*res;
 
 	memset(&hints, 0, sizeof(hints));
+	// AF_INET for IPV4
 	hints.ai_family = AF_INET;
+	//Raw sockets allow new IPv4 protocols to be implemented in user space
 	hints.ai_socktype = SOCK_RAW;
 	hints.ai_protocol = IPPROTO_ICMP;
 
@@ -46,7 +48,7 @@ int	resolve_host(t_ping *ping)
 	memcpy(&ping->addr, res->ai_addr, sizeof(struct sockaddr_in));
 	freeaddrinfo(res);
 
-	/* Binary address -> printable string, for display */
+	/* 4bytes Binary address -> printable ipv4 string, for display */
 	inet_ntop(AF_INET, &ping->addr.sin_addr, ping->ip_str, sizeof(ping->ip_str));
 	return (0);
 }
