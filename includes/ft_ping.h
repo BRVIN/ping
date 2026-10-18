@@ -27,8 +27,8 @@
 /* All times are kept as long long microseconds */
 # define PING_INTERVAL_US	1000000LL
 
-/* Duplicate detection: one bit per seq, modulo DUP_TABLE_BITS */
-# define DUP_TABLE_BITS	1024
+/* Duplicate detection: one cell per seq, modulo DUP_TABLE_SIZE */
+# define DUP_TABLE_SIZE	1024
 
 typedef struct s_ping
 {
@@ -46,7 +46,7 @@ typedef struct s_ping
 	double				rtt_max;
 	double				rtt_sum;
 	double				rtt_sumsq;                  /* sum of squares, for stddev */
-	unsigned char		dup_table[DUP_TABLE_BITS / 8];
+	unsigned char		dup_table[DUP_TABLE_SIZE];
 }	t_ping;
 
 /* Set by the SIGINT handler, checked by the main loop */

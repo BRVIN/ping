@@ -1,27 +1,23 @@
 #include "../includes/ft_ping.h"
 
 /*
-** Duplicate table: one bit per sequence number (modulo DUP_TABLE_BITS).
-** The bit is cleared when that seq is sent and set on its first reply,
-** so a second reply with the same seq finds it already set.
+** Duplicate table: one cell per sequence number (modulo DUP_TABLE_SIZE).
+**   0 = no reply received yet for this seq
+**   1 = a reply was already received
+** The cell is reset to 0 when that seq is sent and set to 1 on its first
+** reply, so a second reply with the same seq finds it already at 1.
 */
 static void	dup_clear(t_ping *ping, int seq)
 {
-	int	bit;
-
-	bit = seq % DUP_TABLE_BITS;
-	ping->dup_table[bit / 8] &= ~(1 << (bit % 8));
+	ping->dup_table[seq % DUP_TABLE_SIZE] = 0;
 }
 
 /* Returns 1 if seq was already received, else marks it and returns 0 */
 static int	dup_test_and_set(t_ping *ping, int seq)
 {
-	int	bit;
-
-	bit = seq % DUP_TABLE_BITS;
-	if (ping->dup_table[bit / 8] & (1 << (bit % 8)))
+	if (ping->dup_table[seq % DUP_TABLE_SIZE] == 1)
 		return (1);
-	ping->dup_table[bit / 8] |= 1 << (bit % 8);
+	ping->dup_table[seq % DUP_TABLE_SIZE] = 1;
 	return (0);
 }
 

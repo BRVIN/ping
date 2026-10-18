@@ -45,34 +45,44 @@ int	ping_loop(t_ping *ping)
 	int					ret;
 
 	memset(&sa, 0, sizeof(sa));
+
 	sa.sa_handler = on_sigint;
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGINT, &sa, NULL);
 
 	if (send_ping(ping) < 0)
 		return (-1);
+
 	next_send = now_us() + PING_INTERVAL_US;
+
 	while (!g_stop)
 	{
 		wait = next_send - now_us();
 		if (wait < 0)
 			wait = 0;
+
 		/* select wants a struct timeval: convert from microseconds */
 		timeout.tv_sec = wait / 1000000;
 		timeout.tv_usec = wait % 1000000;
+
 		/* select modifies the set, so it is rebuilt before every call */
 		FD_ZERO(&readfds);
 		FD_SET(ping->sockfd, &readfds);
+
 		ret = select(ping->sockfd + 1, &readfds, NULL, NULL, &timeout);
+
 		if (ret < 0)
 		{
+			//signal caught :
 			if (errno == EINTR)
 				continue ;
 			perror("ft_ping: select");
 			return (-1);
 		}
+
 		if (ret > 0)
 			recv_ping(ping);
+
 		if (now_us() >= next_send)
 		{
 			if (send_ping(ping) < 0)
