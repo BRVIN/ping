@@ -32,7 +32,7 @@ int	main(int argc, char **argv)
 		return (1);
 	}
 
-	printf("PING %s (%s): %d data bytes\n", ping.host, ping.ip_str, PING_DATA_LEN);
+	printf("PING %s (%s): %d data bytes\n", ping.canonname, ping.ip_str, PING_DATA_LEN);
 
 	/* 3. Send / receive until Ctrl+C (a send failure stops without stats) */
 	if (ping_loop(&ping) < 0)

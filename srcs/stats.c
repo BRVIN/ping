@@ -46,7 +46,7 @@ void	print_stats(t_ping *ping)
 	double	avg;
 	double	variance;
 
-	printf("--- %s ping statistics ---\n", ping->host);
+	printf("--- %s ping statistics ---\n", ping->canonname);
 	printf("%ld packets transmitted, %ld packets received, ",
 		ping->transmitted, ping->received);
 	if (ping->duplicates)

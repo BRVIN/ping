@@ -4,6 +4,8 @@
 ** Turns "google.com" or "8.8.8.8" into a struct sockaddr_in.
 ** getaddrinfo handles both cases (DNS lookup or plain numeric parse).
 ** We ask only for IPv4 (AF_INET) as the subject requires.
+** Also keeps the canonical name (end of the DNS alias chain), which
+** inetutils prints in the header and the statistics.
 */
 
 //MYNOTE
@@ -37,6 +39,8 @@ int	resolve_host(t_ping *ping)
 	//Raw sockets allow new IPv4 protocols to be implemented in user space
 	hints.ai_socktype = SOCK_RAW;
 	hints.ai_protocol = IPPROTO_ICMP;
+	// AI_CANONNAME: also fill res->ai_canonname with the official name
+	hints.ai_flags = AI_CANONNAME;
 
 	// getaddrinfo: take user input written address (ping->host) and "hints" to check options and fill res with output
 	if (getaddrinfo(ping->host, NULL, &hints, &res) != 0)
@@ -46,6 +50,12 @@ int	resolve_host(t_ping *ping)
 	}
 	/* Take the first result; it is a sockaddr_in since we asked AF_INET */
 	memcpy(&ping->addr, res->ai_addr, sizeof(struct sockaddr_in));
+	/* Copy before freeaddrinfo, which frees ai_canonname too */
+	if (res->ai_canonname)
+		snprintf(ping->canonname, sizeof(ping->canonname), "%s",
+			res->ai_canonname);
+	else
+		snprintf(ping->canonname, sizeof(ping->canonname), "%s", ping->host);
 	freeaddrinfo(res);
 
 	/* 4bytes Binary address -> printable ipv4 string, for display */

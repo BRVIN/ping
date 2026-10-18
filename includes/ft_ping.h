@@ -33,6 +33,7 @@
 typedef struct s_ping
 {
 	char				*host;                      /* what the user typed */
+	char				canonname[NI_MAXHOST];      /* official name after aliases, for display */
 	char				ip_str[INET_ADDRSTRLEN];    /* "142.250.x.x" */
 	struct sockaddr_in	addr;                       /* destination for sendto() */
 	int					sockfd;                     /* raw ICMP socket */
