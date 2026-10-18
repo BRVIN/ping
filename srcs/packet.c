@@ -58,6 +58,8 @@ void	build_packet(t_ping *ping, char *packet, int seq)
 {
 	struct icmphdr	*icmp;
 	struct timeval	tv;
+	char			*filler;
+	int				filler_len;
 	int				i;
 
 	memset(packet, 0, PACKET_LEN);
@@ -71,11 +73,14 @@ void	build_packet(t_ping *ping, char *packet, int seq)
 	/* Data part: timestamp first, then a recognisable pattern */
 	gettimeofday(&tv, NULL);
 	memcpy(packet + ICMP_HDR_LEN, &tv, sizeof(tv));
-	i = ICMP_HDR_LEN + sizeof(tv);
 	// Filling the rest of data part with just an incremental number sequence ... :
-	while (i < PACKET_LEN)
+	// counted from the start of the filler (00 01 02 ...), like inetutils
+	filler = packet + ICMP_HDR_LEN + sizeof(tv);
+	filler_len = PACKET_LEN - (ICMP_HDR_LEN + sizeof(tv));
+	i = 0;
+	while (i < filler_len)
 	{
-		packet[i] = i;
+		filler[i] = i;
 		i++;
 	}
 
