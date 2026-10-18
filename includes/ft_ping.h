@@ -5,6 +5,9 @@
 # include <stdlib.h>
 # include <string.h>
 # include <unistd.h>
+# include <errno.h>
+# include <signal.h>
+# include <sys/select.h>
 # include <sys/socket.h>
 # include <sys/time.h>
 # include <netinet/in.h>
@@ -21,6 +24,12 @@
 # define ICMP_HDR_LEN	8
 # define PACKET_LEN		(ICMP_HDR_LEN + PING_DATA_LEN)
 
+/* All times are kept as long long microseconds */
+# define PING_INTERVAL_US	1000000LL
+
+/* Duplicate detection: one bit per seq, modulo DUP_TABLE_BITS */
+# define DUP_TABLE_BITS	1024
+
 typedef struct s_ping
 {
 	char				*host;                      /* what the user typed */
@@ -28,7 +37,20 @@ typedef struct s_ping
 	struct sockaddr_in	addr;                       /* destination for sendto() */
 	int					sockfd;                     /* raw ICMP socket */
 	unsigned short		id;                         /* identifies OUR packets */
+
+	int					seq;                        /* seq of the next packet to send */
+	long				transmitted;                /* packets sent successfully */
+	long				received;                   /* echo replies (duplicates excluded) */
+	long				duplicates;                 /* replies whose seq was already seen */
+	double				rtt_min;                    /* in ms */
+	double				rtt_max;
+	double				rtt_sum;
+	double				rtt_sumsq;                  /* sum of squares, for stddev */
+	unsigned char		dup_table[DUP_TABLE_BITS / 8];
 }	t_ping;
+
+/* Set by the SIGINT handler, checked by the main loop */
+extern volatile sig_atomic_t	g_stop;
 
 /* resolve.c */
 int				resolve_host(t_ping *ping);
@@ -38,7 +60,14 @@ unsigned short	checksum(void *data, int len);
 void			build_packet(t_ping *ping, char *buf, int seq);
 
 /* ping.c */
-void			send_ping(t_ping *ping, int seq);
+int				send_ping(t_ping *ping);
 void			recv_ping(t_ping *ping);
+
+/* loop.c */
+long long		now_us(void);
+int				ping_loop(t_ping *ping);
+
+/* stats.c */
+void			print_stats(t_ping *ping);
 
 #endif

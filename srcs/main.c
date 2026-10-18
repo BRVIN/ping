@@ -9,6 +9,8 @@ int	main(int argc, char **argv)
 		fprintf(stderr, "usage: %s <host>\n", argv[0]);
 		return (1);
 	}
+	/* Print each line immediately, even when stdout is a pipe */
+	setvbuf(stdout, NULL, _IOLBF, 0);
 	memset(&ping, 0, sizeof(ping));
 	ping.host = argv[1];
 	/*
@@ -34,10 +36,17 @@ int	main(int argc, char **argv)
 
 	printf("PING %s (%s): %d data bytes\n", ping.host, ping.ip_str, PING_DATA_LEN);
 
-	/* 3. One request, one reply */
-	send_ping(&ping, 0);
-	recv_ping(&ping);
-
+	/* 3. Send / receive until Ctrl+C (a send failure stops without stats) */
+	if (ping_loop(&ping) < 0)
+	{
+		close(ping.sockfd);
+		return (1);
+	}
+	print_stats(&ping);
 	close(ping.sockfd);
+
+	/* Like inetutils: success only if at least one reply came back */
+	if (ping.received == 0)
+		return (1);
 	return (0);
 }
