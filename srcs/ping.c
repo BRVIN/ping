@@ -73,6 +73,13 @@ static void	update_rtt(t_ping *ping, double rtt)
 //recv_ping
 //
 //  ip->ihl * 4 : Internet Header Length is the length of the internet header in 32 bit word, so we multiply * 4 to get byte size
+//
+//  recvfrom([notre fd] [message retour] [<- taille] [Flag] [addresse sender] [<- taille] )
+//  recvfrom([notre fd]          [message retour]  [<- taille]        [Flag]               [addresse sender]            [<- taille]          )
+//  recvfrom([(int)ping->sockfd] [(char[1024])buf] [(int)sizeof(buf)] [(int)MSG_DONTWAIT]  [(struct sockaddr *)&from]   [(socklen_t)fromlen] )
+//  recvfrrom here put packet response into buf, and address of sender into from, we know a message should be available thanks to select().
+//
+
 void	recv_ping(t_ping *ping)
 {
 	char				buf[1024];
@@ -89,7 +96,7 @@ void	recv_ping(t_ping *ping)
 	int					seq;
 	int					dup;
 
-	/* MSG_DONTWAIT: never block here, the main loop does the waiting */
+	// 1. receive packet content into buf
 	fromlen = sizeof(from);
 	n = recvfrom(ping->sockfd, buf, sizeof(buf), MSG_DONTWAIT,
 			(struct sockaddr *)&from, &fromlen);
@@ -97,6 +104,7 @@ void	recv_ping(t_ping *ping)
 		return ;
 	now = now_us();
 
+	//2. put packet content in icmp (for good structure and clarity)
 	ip = (struct iphdr *)buf;
 	ip_hlen = ip->ihl * 4;
 	/* Too short to contain the IP header + the ICMP header: ignore */
@@ -110,11 +118,12 @@ void	recv_ping(t_ping *ping)
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent))
 		return ;
 
-	/* Our timestamp came back inside the data */
+	//3. retrieve our send timestamp and calcul the difference with now 
 	memcpy(&sent, buf + ip_hlen + ICMP_HDR_LEN, sizeof(sent));
 	rtt = (now - ((long long)sent.tv_sec * 1000000LL + sent.tv_usec))
 		/ 1000.0;
 
+	//4. Packet logic: update packet structures and stats
 	seq = ntohs(icmp->un.echo.sequence);
 	dup = dup_test_and_set(ping, seq);
 	if (dup)
@@ -123,6 +132,7 @@ void	recv_ping(t_ping *ping)
 		ping->received++;
 	update_rtt(ping, rtt);
 
+	//5. Just display
 	/* n - ip_hlen = ICMP size (64), what real ping prints */
 	inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
 	printf("%ld bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms%s\n",
