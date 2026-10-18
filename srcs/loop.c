@@ -57,6 +57,7 @@ int	ping_loop(t_ping *ping)
 
 	while (!g_stop)
 	{
+		//1. calcul time to wait to respect packet timing interval
 		wait = next_send - now_us();
 		if (wait < 0)
 			wait = 0;
@@ -65,12 +66,13 @@ int	ping_loop(t_ping *ping)
 		timeout.tv_sec = wait / 1000000;
 		timeout.tv_usec = wait % 1000000;
 
+		//2. Setup for select
 		/* select modifies the set, so it is rebuilt before every call */
 		FD_ZERO(&readfds);
 		FD_SET(ping->sockfd, &readfds);
 
+		// The timeout trigger the wait to respect packet sending timing interval
 		ret = select(ping->sockfd + 1, &readfds, NULL, NULL, &timeout);
-
 		if (ret < 0)
 		{
 			//signal caught :
@@ -80,13 +82,16 @@ int	ping_loop(t_ping *ping)
 			return (-1);
 		}
 
+		//3. RECEIVE PACKET  (if one available)
 		if (ret > 0)
 			recv_ping(ping);
 
+		//4. SEND PACKET (supposed to always go in with select timeout wait i think)
 		if (now_us() >= next_send)
 		{
 			if (send_ping(ping) < 0)
 				return (-1);
+			// calcule the time we ll send next packet
 			next_send = now_us() + PING_INTERVAL_US;
 		}
 	}
