@@ -9,7 +9,8 @@ SRCS	= srcs/main.c \
 		  srcs/ping.c \
 		  srcs/icmp_error.c \
 		  srcs/loop.c \
-		  srcs/stats.c
+		  srcs/stats.c \
+		  srcs/checks.c
 OBJS	= $(SRCS:.c=.o)
 
 all: $(NAME)
