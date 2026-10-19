@@ -14,7 +14,7 @@ void check_input_options(int argc, char **argv, t_ping *ping) {
 		if(str[0] == '-')
 		{
 			if (!str[1] || str[2] || (str[1] != '?' && str[1] != 'v') ) {
-				fprintf(stderr, "ping: invalid option -- '%s'\nTry '-?' for more information.\n", str + 1);	
+				fprintf(stderr, "ft_ping: invalid option -- '%s'\nTry '-?' for more information.\n", str + 1);	
 				exit(64);
 			}
 
@@ -55,7 +55,7 @@ void	get_check_host(int argc, char **argv, t_ping *ping)
 
 	// no potential host found
 	if (!str) {
-		fprintf(stderr, "ping: missing host operand\nTry 'ping -?' for more information.\n");
+		fprintf(stderr, "ft_ping: missing host operand\nTry 'ping -?' for more information.\n");
 		exit(64);
 	}
 
@@ -66,7 +66,7 @@ void	get_check_host(int argc, char **argv, t_ping *ping)
 	{
 		if(!isalnum(str[i]) && str[i] != '-' && str[i] != '.')
 		{
-			fprintf(stderr, "ping: unknown host.\n");
+			fprintf(stderr, "ft_ping: unknown host.\n");
 			exit(1);
 		}
 		++i;
@@ -83,7 +83,7 @@ int	main(int argc, char **argv)
 	setvbuf(stdout, NULL, _IOLBF, 0);
 
 	if (argc == 1) {
-		fprintf(stderr, "ping: missing host operand\nTry 'ping -?' for more information.\n");
+		fprintf(stderr, "ft_ping: missing host operand\nTry 'ping -?' for more information.\n");
 		return (64);
 	}
 
