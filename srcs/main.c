@@ -32,7 +32,11 @@ int	main(int argc, char **argv)
 	ping.sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (ping.sockfd < 0)
 	{
-		perror("socket");
+		/* Not root (and no CAP_NET_RAW): same message as inetutils */
+		if (errno == EPERM || errno == EACCES)
+			fprintf(stderr, "ft_ping: Lacking privilege for icmp socket.\n");
+		else
+			fprintf(stderr, "ft_ping: %s\n", strerror(errno));
 		return (1);
 	}
 
