@@ -16,6 +16,8 @@
 # include <arpa/inet.h>        /* inet_ntop, htons, ntohs */
 # include <netdb.h>            /* getaddrinfo */
 
+# include <ctype.h>
+
 /*
 ** inetutils ping sends 56 bytes of data by default.
 ** 56 data + 8 ICMP header = 64 bytes ("64 bytes from ...").
@@ -48,6 +50,7 @@ typedef struct s_ping
 	double				rtt_sum;
 	double				rtt_sumsq;                  /* sum of squares, for stddev */
 	unsigned char		dup_table[DUP_TABLE_SIZE];
+	int				verbose;
 }	t_ping;
 
 /* Set by the SIGINT handler, checked by the main loop */
@@ -74,5 +77,8 @@ int				ping_loop(t_ping *ping);
 
 /* stats.c */
 void			print_stats(t_ping *ping);
+
+void			check_input_options(int argc, char **argv, t_ping *ping);
+void			get_check_host(int argc, char **argv, t_ping *ping);
 
 #endif
