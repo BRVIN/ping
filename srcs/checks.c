@@ -14,7 +14,7 @@ void check_input_options(int argc, char **argv, t_ping *ping) {
 		if(str[0] == '-')
 		{
 			if (!str[1] || str[2] || (str[1] != '?' && str[1] != 'v') ) {
-				fprintf(stderr, "ft_ping: invalid option -- '%s'\nTry '-?' for more information.\n", str + 1);	
+				fprintf(stderr, "ft_ping: invalid option -- '%s'\nTry 'ft_ping -?' for more information.\n", str + 1);	
 				exit(64);
 			}
 
