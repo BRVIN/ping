@@ -66,7 +66,7 @@ void	get_check_host(int argc, char **argv, t_ping *ping)
 	{
 		if(!isalnum(str[i]) && str[i] != '-' && str[i] != '.')
 		{
-			fprintf(stderr, "ft_ping: unknown host.\n");
+			fprintf(stderr, "ft_ping: unknown host\n");
 			exit(1);
 		}
 		++i;
