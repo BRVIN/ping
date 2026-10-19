@@ -3,6 +3,7 @@
 int	main(int argc, char **argv)
 {
 	t_ping	ping;
+	int		one;
 
 	//setvbuf: to have output always print directly, it's like doing fflush(stdout) after every print
 	setvbuf(stdout, NULL, _IOLBF, 0);
@@ -39,6 +40,9 @@ int	main(int argc, char **argv)
 			fprintf(stderr, "ft_ping: %s\n", strerror(errno));
 		return (1);
 	}
+	/* Like inetutils: allow sending to a broadcast address (no effect otherwise) */
+	one = 1;
+	setsockopt(ping.sockfd, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one));
 
 	printf("PING %s (%s): %d data bytes", ping.canonname, ping.ip_str, PING_DATA_LEN);
 	if (ping.verbose)
