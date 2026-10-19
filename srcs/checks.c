@@ -19,7 +19,7 @@ void check_input_options(int argc, char **argv, t_ping *ping) {
 			}
 
       			if (str[1] == '?') {
-				printf("Usage: ping [OPTION...] HOST ...\nSend ICMP ECHO_REQUEST packets to network hosts.\n\n-?   give this help list\n-v   verbose output\n");
+				printf("Usage: ft_ping [OPTION...] HOST ...\nSend ICMP ECHO_REQUEST packets to network hosts.\n\n-?   give this help list\n-v   verbose output\n");
 				exit(0);
 			}
 			else if (str[1] == 'v') {
@@ -55,7 +55,7 @@ void	get_check_host(int argc, char **argv, t_ping *ping)
 
 	// no potential host found
 	if (!str) {
-		fprintf(stderr, "ft_ping: missing host operand\nTry 'ping -?' for more information.\n");
+		fprintf(stderr, "ft_ping: missing host operand\nTry 'ft_ping -?' for more information.\n");
 		exit(64);
 	}
 
