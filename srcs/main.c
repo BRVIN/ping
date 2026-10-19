@@ -2,7 +2,7 @@
 
 // any argv beginning with "-" is considered an option, then it can be only :
 // [-v] without additional character
-// [-?.*] random character are accepted after '?' (like inetutils)
+// [-?] without any additional character
 void check_input_options(int argc, char **argv, t_ping *ping) {
 
 	char *str;
@@ -14,7 +14,7 @@ void check_input_options(int argc, char **argv, t_ping *ping) {
 		if(str[0] == '-')
 		{
 			if (!str[1] || str[2] || (str[1] != '?' && str[1] != 'v') ) {
-				fprintf(stderr, "ping: invalid option -- '%s'\nTry '-?' for more information.\n", str);	
+				fprintf(stderr, "ping: invalid option -- '%s'\nTry '-?' for more information.\n", str + 1);	
 				exit(64);
 			}
 
@@ -56,7 +56,7 @@ void	get_check_host(int argc, char **argv, t_ping *ping)
 	// no potential host found
 	if (!str) {
 		fprintf(stderr, "ping: missing host operand\nTry 'ping -?' for more information.\n");
-		exit(1);
+		exit(64);
 	}
 
 	i = 0;
