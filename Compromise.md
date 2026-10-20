@@ -73,3 +73,55 @@ ft_ping prints nothing.
 - **It fits the subject.** We do a minimal implementation of inetutils ping, not a byte-for-byte
   copy of every corner case. Dropping malformed or crafted packets silently is reasonable for
   a ping.
+
+---
+
+## 2. Minimal `-v`: only the id
+
+**What we did.** With `-v`, ft_ping only adds the ICMP identifier to the first line:
+
+```
+PING host (1.2.3.4): 56 data bytes, id 0x1234 = 4660
+```
+
+Nothing else changes with `-v`. In `srcs/icmp_error.c`, `print_ip_dump()` and `print_icmp()`
+were removed, and `print_quoted_packet()` no longer takes a `verbose` argument.
+
+**inetutils behavior.** In `ping_echo.c`, `-v` (`OPT_VERBOSE`) also changes how ICMP errors
+about our packets are printed:
+
+- **Dest Unreachable, Redirect, Time Exceeded** (line 377): after the message line, it prints
+  the quoted packet, as a decoded table of the IP header followed by an
+  `ICMP: type …, code …, size …, id …, seq …` line.
+- **All error types** (line 309): before that table, it prints the raw bytes of the quoted IP
+  header (`IP Hdr Dump:`).
+
+Without `-v`, inetutils prints only the message line for these three types. For Source Quench
+and Parameter Problem, it prints the message line and then the decoded table, but no
+`IP Hdr Dump:`.
+
+**ft_ping behavior.** Errors are printed the same way with or without `-v`, which is exactly
+inetutils' output **without** `-v`:
+
+- Dest Unreachable / Redirect / Time Exceeded: `N bytes from X: <message>` only.
+- Source Quench / Parameter Problem: the message, then the decoded table (no `IP Hdr Dump:`).
+
+**When it shows.** Only when **both** of these are true:
+
+- `-v` is given;
+- an ICMP error about one of our packets arrives (unreachable host, TTL expired, …).
+
+Echo replies, the `PING` line, statistics and every output without `-v` are identical to
+inetutils.
+
+**Why it's acceptable.**
+
+- **The useful information is still printed.** The error message line, which tells what went
+  wrong and which machine reported it, appears with or without `-v`. The extra `-v` output is a
+  low-level dump of our own request, which we already know.
+- **It fits the subject.** We do a minimal implementation of ping, and the subject asks for
+  `-v` without describing these dumps. Keeping the id display still makes `-v` visibly do
+  something, like inetutils.
+- **Output without `-v` is unchanged**, so the default behavior still matches the reference
+  exactly.
+- **The code is simpler.** The hex dump and the verbose-only branches are gone.
