@@ -132,8 +132,10 @@ inetutils.
 
 ```
 N bytes from X: Source Quench
-N bytes from X: Parameter problem: IP address = 20.0.0.0
+N bytes from X: Parameter problem: pointer = 20
 ```
+
+(The `pointer = …` wording is itself a difference from inetutils: see entry 4.)
 
 `print_quoted_packet()` was removed from `srcs/icmp_error.c`. With this entry and entry 2, every
 ICMP error now prints exactly one line, with or without `-v`.
@@ -152,9 +154,7 @@ ICMP: type 8, code 0, size 64, id 0x1234, seq 0x0003
 RFC 792 does not ask for this. It describes the messages, not what a ping program should print.
 It is a display choice of inetutils.
 
-**ft_ping behavior.** The message line only. The `Parameter problem: IP address = …` line is
-kept exactly as in inetutils. inetutils reads bytes 4–7 of the ICMP header as an IP address,
-although RFC 792 defines byte 4 as a one-byte pointer. So pointer 20 shows as `20.0.0.0`.
+**ft_ping behavior.** The message line only.
 
 **When it shows.** Only if one of these two errors about our own echo request arrives. That is
 the only case where our output is shorter than inetutils', with or without `-v`.
@@ -174,3 +174,60 @@ the only case where our output is shorter than inetutils', with or without `-v`.
   IP options dump) are gone, and `handle_icmp_error` no longer needs the quoted header pointer.
 - **It fits the subject.** We do a minimal implementation of ping, and the subject does not ask
   for packet dumps.
+
+---
+
+## 4. Parameter Problem: print the pointer, not an "IP address"
+
+**What we did.** For a Parameter Problem message, ft_ping prints the pointer as a number:
+
+```
+N bytes from X: Parameter problem: pointer = 20
+```
+
+**What RFC 792 says.** In the "Parameter Problem Message" section, the second 32-bit row of the
+ICMP header is:
+
+```
+   |    Pointer    |                   unused                      |
+```
+
+- **Pointer** (byte 4, one byte): "identifies the octet where an error was detected". It is the
+  number of the byte, counted from 0, in our original IP header that the router did not accept.
+  For example 1 = TOS, 20 = first IP option.
+- **unused** (bytes 5–7): always 0.
+
+**inetutils behavior.** `print_parameterprob` (`ping_echo.c:382`) does:
+
+```c
+printf ("Parameter problem: IP address = %s\n", inet_ntoa (icmp->icmp_gwaddr));
+```
+
+`icmp_gwaddr` is the **Redirect** field, where bytes 4–7 really are a 4-byte gateway address.
+For Parameter Problem, inetutils reads the 1-byte pointer and the 3 unused bytes as one IP
+address. Pointer 20 is therefore printed as:
+
+```
+Parameter problem: IP address = 20.0.0.0
+```
+
+This has two mistakes:
+
+- **Wrong label.** "IP address", but the value is a byte offset, not an address.
+- **Wrong size.** 4 bytes are read instead of 1, so the 3 unused bytes show up as `.0.0.0`.
+
+**ft_ping behavior.** We read only byte 4 and print it as a number, following the RFC.
+
+**When it shows.** Only when a Parameter Problem about our own echo request arrives. As explained
+in entry 3, this practically never happens. Our requests have no IP options, and the kernel
+builds their IP header.
+
+**Why it's acceptable.**
+
+- **It follows the standard.** The RFC defines the field as a one-byte pointer, and we print it
+  as one.
+- **The output is clearer.** `pointer = 20` can be read directly. `IP address = 20.0.0.0` hides
+  the value behind the wrong label.
+- **The information is the same.** The pointer value appears in both outputs. We only fix how
+  it is shown.
+- **It almost never shows**, so in practice our output cannot be told apart from inetutils'.

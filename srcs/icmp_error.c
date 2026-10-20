@@ -128,7 +128,6 @@ void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct s
 {
 	struct icmphdr	*icmp;
 	char			from_str[INET_ADDRSTRLEN];
-	char			gw_str[INET_ADDRSTRLEN];
 
 	// check "IH+64" data to see if we are the sender, ignore if we are not
 	if (!is_from_us(ping, buf, n, ip_hlen))
@@ -146,9 +145,6 @@ void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct s
 	else if (icmp->type == ICMP_SOURCE_QUENCH)
 		printf("Source Quench\n");
 	else if (icmp->type == ICMP_PARAMETERPROB)
-	{
-		/* Bytes 4-7 read as an address, like inetutils (pointer = 1st byte) */
-		inet_ntop(AF_INET, &icmp->un.gateway, gw_str, sizeof(gw_str));
-		printf("Parameter problem: IP address = %s\n", gw_str);
-	}
+		printf("Parameter problem: pointer = %u\n",
+			((unsigned char *)icmp)[4]);
 }
