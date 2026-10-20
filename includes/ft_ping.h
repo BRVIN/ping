@@ -75,6 +75,9 @@ void			handle_icmp_error(t_ping *ping, char *buf, ssize_t n,
 long long		now_us(void);
 int				ping_loop(t_ping *ping);
 
+/* debug.c */
+void			debug_print_packet(char *buf, ssize_t n);
+
 /* stats.c */
 void			print_stats(t_ping *ping);
 

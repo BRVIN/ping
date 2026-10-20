@@ -10,7 +10,8 @@ SRCS	= srcs/main.c \
 		  srcs/icmp_error.c \
 		  srcs/loop.c \
 		  srcs/stats.c \
-		  srcs/checks.c
+		  srcs/checks.c \
+		  srcs/debug.c
 OBJS	= $(SRCS:.c=.o)
 
 all: $(NAME)
