@@ -41,8 +41,7 @@ typedef struct s_ping
 	int					sockfd;                     /* raw ICMP socket */
 	unsigned short		id;                         /* identifies OUR packets */
 
-	int					seq;                        /* seq of the next packet to send */
-	long				transmitted;                /* packets sent successfully */
+	long				transmitted;                /* packets sent = seq of the next one */
 	long				received;                   /* echo replies (duplicates excluded) */
 	long				duplicates;                 /* replies whose seq was already seen */
 	double				rtt_min;                    /* in ms */

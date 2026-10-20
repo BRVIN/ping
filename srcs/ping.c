@@ -22,15 +22,16 @@ static int	dup_test_and_set(t_ping *ping, int seq)
 }
 
 /*
-** Sends the echo request number ping->seq.
+** Sends the echo request number ping->transmitted (its seq on 16 bits,
+** like inetutils which uses ping_num_xmit as the sequence number).
 ** A sendto failure is fatal, like inetutils ("sending packet: ...").
 */
 int	send_ping(t_ping *ping)
 {
 	char	packet[PACKET_LEN];
 
-	build_packet(ping, packet, ping->seq);
-	dup_clear(ping, ping->seq & 0xFFFF);
+	build_packet(ping, packet, ping->transmitted & 0xFFFF);
+	dup_clear(ping, ping->transmitted & 0xFFFF);
 	/* The kernel builds the IP header around our ICMP packet */
 	if (sendto(ping->sockfd, packet, PACKET_LEN, 0,
 			(struct sockaddr *)&ping->addr, sizeof(ping->addr)) < 0)
@@ -38,7 +39,6 @@ int	send_ping(t_ping *ping)
 		fprintf(stderr, "ft_ping: sending packet: %s\n", strerror(errno));
 		return (-1);
 	}
-	ping->seq++;
 	ping->transmitted++;
 	return (0);
 }
