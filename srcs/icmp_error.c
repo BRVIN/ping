@@ -215,7 +215,7 @@ void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct s
 		printf("Source Quench\n");
 		print_quoted_packet(orig, ping->verbose);
 	}
-	else /* ICMP_PARAMETERPROB */
+	else if (icmp->type == ICMP_PARAMETERPROB)
 	{
 		inet_ntop(AF_INET, &icmp->un.gateway, gw_str, sizeof(gw_str));
 		printf("Parameter problem: IP address = %s\n", gw_str);
