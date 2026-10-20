@@ -113,7 +113,7 @@ void	recv_ping(t_ping *ping)
 	now = now_us();
 	//debug_print_packet(buf, n);
 
-	//2. put packet content in icmp (for good structure and clarity)
+	//2. get ip content (for good structure and clarity)
 	ip = (struct iphdr *)buf;
 	ip_hlen = ip->ihl * 4;
 	/* Too short to contain the IP header + the ICMP header: same message as inetutils */
@@ -124,16 +124,18 @@ void	recv_ping(t_ping *ping)
 	}
 	icmp = (struct icmphdr *)(buf + ip_hlen);
 
-	if (icmp->type == ICMP_ECHO || icmp->type == ICMP_TIMESTAMP
-		|| icmp->type == ICMP_ADDRESS || icmp->type == ICMP_TIMESTAMPREPLY
-		|| icmp->type == ICMP_ADDRESSREPLY)
-		return ;
-	/* Anything else than a reply: maybe an error about one of our packets */
-	if (icmp->type != ICMP_ECHOREPLY)
+	//3. ICMP content check now
+	/* ICMP errors (RFC 792): they quote the packet that failed, maybe ours */
+	if (icmp->type == ICMP_DEST_UNREACH || icmp->type == ICMP_SOURCE_QUENCH
+		|| icmp->type == ICMP_REDIRECT || icmp->type == ICMP_TIME_EXCEEDED
+		|| icmp->type == ICMP_PARAMETERPROB)
 	{
 		handle_icmp_error(ping, buf, n, ip_hlen, &from);
 		return ;
 	}
+	/* Requests, other replies, unknown types: not for us */
+	if (icmp->type != ICMP_ECHOREPLY)
+		return ;
 	/* Echo reply for another process: skip it */
 	if (ntohs(icmp->un.echo.id) != ping->id)
 		return ;
