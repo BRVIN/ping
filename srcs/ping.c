@@ -79,7 +79,15 @@ static void	update_rtt(t_ping *ping, double rtt)
 //  recvfrom([(int)ping->sockfd] [(char[1024])buf] [(int)sizeof(buf)] [(int)MSG_DONTWAIT]  [(struct sockaddr *)&from]   [(socklen_t)fromlen] )
 //  recvfrrom here put packet response into buf, and address of sender into from, we know a message should be available thanks to select().
 //
-
+// checksum :
+// Checksum over the whole ICMP part (checksum field included): a valid
+// packet sums to 0. Like inetutils, a mismatch is reported but the reply is still processed and counted.
+//
+//icmp multiple type checks :
+// Requests (our own ones, seen on loopback): skip them.
+// Timestamp / address mask replies answer requests we never send.
+// not errors, someone else ping us or stuff like this
+//
 void	recv_ping(t_ping *ping)
 {
 	char				buf[1024];
@@ -116,11 +124,6 @@ void	recv_ping(t_ping *ping)
 	}
 	icmp = (struct icmphdr *)(buf + ip_hlen);
 
-	/*
-	** Requests (our own ones, seen on loopback): skip them.
-	** Timestamp / address mask replies answer requests we never send.
-	*/
-	// not errors, someone else ping us or stuff like this
 	if (icmp->type == ICMP_ECHO || icmp->type == ICMP_TIMESTAMP
 		|| icmp->type == ICMP_ADDRESS || icmp->type == ICMP_TIMESTAMPREPLY
 		|| icmp->type == ICMP_ADDRESSREPLY)
@@ -134,9 +137,15 @@ void	recv_ping(t_ping *ping)
 	/* Echo reply for another process: skip it */
 	if (ntohs(icmp->un.echo.id) != ping->id)
 		return ;
+
+	if (checksum(icmp, n - ip_hlen) != 0)
+	{
+		inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
+		fprintf(stderr, "checksum mismatch from %s\n", from_str);
+	}
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent))
 	{
-		fprintf(stderr, "ft_printf error: packet too short too hold ICMP Data");
+		fprintf(stderr, "ft_ping error: packet too short too hold ICMP Data");
 		return ;
 	}
 
