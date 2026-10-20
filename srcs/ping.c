@@ -147,14 +147,13 @@ void	recv_ping(t_ping *ping)
 	}
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent))
 	{
-		fprintf(stderr, "ft_ping error: packet too short too hold ICMP Data");
+		fprintf(stderr, "ft_ping error: packet to short too hold ICMP Data\n");
 		return ;
 	}
 
 	//3. retrieve our send timestamp and calcul the difference with now 
 	memcpy(&sent, buf + ip_hlen + ICMP_HDR_LEN, sizeof(sent));
-	rtt = (now - ((long long)sent.tv_sec * 1000000LL + sent.tv_usec))
-		/ 1000.0;
+	rtt = (now - ((long long)sent.tv_sec * 1000000LL + sent.tv_usec)) / 1000.0;
 
 	//4. Packet logic: update packet structures and stats
 	seq = ntohs(icmp->un.echo.sequence);
