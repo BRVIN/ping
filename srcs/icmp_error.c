@@ -53,23 +53,36 @@ static const t_icmp_code	g_codes[] = {
 ** The error is ours if the quoted packet is an echo request with our id,
 ** sent to our target. Also checks that everything we read is inside n.
 */
-static int	is_our_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen)
+// 
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |      Internet Header + 64 bits of Original Data Datagram      |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// Remember: here we unwrap the IP/ICMP content copied into the real ICMP packet content Data
+static int	is_from_us(t_ping *ping, char *buf, ssize_t n, int ip_hlen)
 {
 	struct iphdr	*orig;
 	struct icmphdr	*orig_icmp;
 	int				orig_hlen;
 
+	// getting the copied ip header from "IH+64" ICMP content
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(struct iphdr))
 		return (0);
 	orig = (struct iphdr *)(buf + ip_hlen + ICMP_HDR_LEN);
 	orig_hlen = orig->ihl * 4;
+
+	// getting the copied ICMP header ...
 	if (n < ip_hlen + ICMP_HDR_LEN + orig_hlen + ICMP_HDR_LEN)
 		return (0);
 	orig_icmp = (struct icmphdr *)((char *)orig + orig_hlen);
-	return (orig->daddr == ping->addr.sin_addr.s_addr
-		&& orig->protocol == IPPROTO_ICMP
-		&& orig_icmp->type == ICMP_ECHO
-		&& ntohs(orig_icmp->un.echo.id) == ping->id);
+
+	if (orig->daddr != ping->addr.sin_addr.s_addr
+		|| orig->protocol != IPPROTO_ICMP
+		|| orig_icmp->type != ICMP_ECHO
+		|| ntohs(orig_icmp->un.echo.id) != ping->id) {
+		return 0;
+	}
+
+	return 1;
 }
 
 static void	print_code_message(int type, int code, const char *prefix)
@@ -161,6 +174,21 @@ static void	print_icmp(struct icmphdr *icmp, struct iphdr *orig,
 ** Called by recv_ping for the 5 ICMP error types only: Dest Unreachable,
 ** Source Quench, Redirect, Time Exceeded, Parameter Problem.
 */
+
+// possible ICMP types entering are :
+// [ICMP_DEST_UNREACH] [ICMP_SOURCE_QUENCH] [ICMP_REDIRECT] [ICMP_TIME_EXCEEDED] [ICMP_PARAMETERPROB]
+// they all have the same header :
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |     Type      |     Code      |          Checksum             |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |    Pointer    |                   unused                      |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |      Internet Header + 64 bits of Original Data Datagram      |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//
+// they all send " The internet header plus the first 64 bits of the original datagram's data"
+// is_our_error we check it to see if we are the sender
+//
 void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct sockaddr_in *from)
 {
 	struct icmphdr	*icmp;
@@ -168,7 +196,8 @@ void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct s
 	char			from_str[INET_ADDRSTRLEN];
 	char			gw_str[INET_ADDRSTRLEN];
 
-	if (!is_our_error(ping, buf, n, ip_hlen))
+	// check "IH+64" data to see if we are the sender, ignore if we are not
+	if (!is_from_us(ping, buf, n, ip_hlen))
 		return ;
 	icmp = (struct icmphdr *)(buf + ip_hlen);
 	orig = (struct iphdr *)(buf + ip_hlen + ICMP_HDR_LEN);
