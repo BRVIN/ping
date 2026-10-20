@@ -103,6 +103,7 @@ void	recv_ping(t_ping *ping)
 	if (n < 0)
 		return ;
 	now = now_us();
+	//debug_print_packet(buf, n);
 
 	//2. put packet content in icmp (for good structure and clarity)
 	ip = (struct iphdr *)buf;
