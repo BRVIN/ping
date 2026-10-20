@@ -88,9 +88,12 @@ static int	is_from_us(t_ping *ping, char *buf, ssize_t n, int ip_hlen)
 static void	print_code_message(int type, int code, const char *prefix)
 {
 	size_t	i;
+	size_t	g_codes_size;
 
+	/* number of entries in g_codes, computed at compile time */
+	g_codes_size = sizeof(g_codes) / sizeof(g_codes[0]);
 	i = 0;
-	while (i < sizeof(g_codes) / sizeof(g_codes[0]))
+	while (i < g_codes_size)
 	{
 		if (g_codes[i].type == type && g_codes[i].code == code)
 		{
