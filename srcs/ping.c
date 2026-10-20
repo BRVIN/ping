@@ -116,6 +116,7 @@ void	recv_ping(t_ping *ping)
 	** Requests (our own ones, seen on loopback): skip them.
 	** Timestamp / address mask replies answer requests we never send.
 	*/
+	// not errors, someone else ping us or stuff like this
 	if (icmp->type == ICMP_ECHO || icmp->type == ICMP_TIMESTAMP
 		|| icmp->type == ICMP_ADDRESS || icmp->type == ICMP_TIMESTAMPREPLY
 		|| icmp->type == ICMP_ADDRESSREPLY)
