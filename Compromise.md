@@ -52,7 +52,7 @@ header with our id. That is at least `ip_hlen + 8 + 20 + 8` bytes.
 - **Types 3, 4, 5, 11, 12** quote the packet that failed (RFC 792 requires it). They are still
   handled, with exactly the same output as before.
 - **Types 10, 15 and 16** are 8-byte messages with no data. They always failed the length check
-  in `is_our_error`, so they were **never** printed, even before the change. Their branches
+  in `is_from_us`, so they were **never** printed, even before the change. Their branches
   could not run.
 - **Type 9 and unknown types** have no quoted packet. They could only be printed if their data
   happened to look exactly like our quoted echo request. In practice that takes a crafted

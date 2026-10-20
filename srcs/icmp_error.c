@@ -187,7 +187,7 @@ static void	print_icmp(struct icmphdr *icmp, struct iphdr *orig,
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
 // they all send " The internet header plus the first 64 bits of the original datagram's data"
-// is_our_error we check it to see if we are the sender
+// is_from_us checks it to see if we are the sender
 //
 void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct sockaddr_in *from)
 {
