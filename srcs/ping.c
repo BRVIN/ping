@@ -108,9 +108,12 @@ void	recv_ping(t_ping *ping)
 	//2. put packet content in icmp (for good structure and clarity)
 	ip = (struct iphdr *)buf;
 	ip_hlen = ip->ihl * 4;
-	/* Too short to contain the IP header + the ICMP header: ignore */
-	if (n < ip_hlen + ICMP_HDR_LEN)
+	/* Too short to contain the IP header + the ICMP header: same message as inetutils */
+	if (n < ip_hlen + ICMP_HDR_LEN) {
+		inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
+		fprintf(stderr, "packet too short (%ld bytes) from %s\n", (long)n, from_str);
 		return ;
+	}
 	icmp = (struct icmphdr *)(buf + ip_hlen);
 
 	/*
