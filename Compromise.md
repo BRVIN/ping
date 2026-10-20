@@ -85,7 +85,7 @@ PING host (1.2.3.4): 56 data bytes, id 0x1234 = 4660
 ```
 
 Nothing else changes with `-v`. In `srcs/icmp_error.c`, `print_ip_dump()` and `print_icmp()`
-were removed, and `print_quoted_packet()` no longer takes a `verbose` argument.
+were removed (`print_quoted_packet()` was removed later, see entry 3).
 
 **inetutils behavior.** In `ping_echo.c`, `-v` (`OPT_VERBOSE`) also changes how ICMP errors
 about our packets are printed:
@@ -100,11 +100,9 @@ Without `-v`, inetutils prints only the message line for these three types. For 
 and Parameter Problem, it prints the message line and then the decoded table, but no
 `IP Hdr Dump:`.
 
-**ft_ping behavior.** Errors are printed the same way with or without `-v`, which is exactly
-inetutils' output **without** `-v`:
-
-- Dest Unreachable / Redirect / Time Exceeded: `N bytes from X: <message>` only.
-- Source Quench / Parameter Problem: the message, then the decoded table (no `IP Hdr Dump:`).
+**ft_ping behavior.** Errors are printed the same way with or without `-v`: for Dest
+Unreachable / Redirect / Time Exceeded, `N bytes from X: <message>` only, which is exactly
+inetutils' output **without** `-v`. (Source Quench and Parameter Problem: see entry 3.)
 
 **When it shows.** Only when **both** of these are true:
 
@@ -122,6 +120,57 @@ inetutils.
 - **It fits the subject.** We do a minimal implementation of ping, and the subject asks for
   `-v` without describing these dumps. Keeping the id display still makes `-v` visibly do
   something, like inetutils.
-- **Output without `-v` is unchanged**, so the default behavior still matches the reference
-  exactly.
+- **Output without `-v` is unchanged** by this entry, so the default behavior still matches the
+  reference (apart from entry 3).
 - **The code is simpler.** The hex dump and the verbose-only branches are gone.
+
+---
+
+## 3. No quoted packet for Source Quench and Parameter Problem
+
+**What we did.** For these two error types, ft_ping prints only the message line:
+
+```
+N bytes from X: Source Quench
+N bytes from X: Parameter problem: IP address = 20.0.0.0
+```
+
+`print_quoted_packet()` was removed from `srcs/icmp_error.c`. With this entry and entry 2, every
+ICMP error now prints exactly one line, with or without `-v`.
+
+**inetutils behavior.** In its ICMP type table (`ping_echo.c:392`), Source Quench calls
+`print_ip_data` directly, and `print_parameterprob` (`ping_echo.c:382`) calls it too. Neither
+checks `-v`. So for these two types, inetutils always prints the decoded quoted packet after the
+message, even without `-v`:
+
+```
+Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src	Dst	Data
+ 4  5  00 0054 1234   2 0000  40  01 abcd 192.168.1.2  8.8.8.8
+ICMP: type 8, code 0, size 64, id 0x1234, seq 0x0003
+```
+
+RFC 792 does not ask for this. It describes the messages, not what a ping program should print.
+It is a display choice of inetutils.
+
+**ft_ping behavior.** The message line only. The `Parameter problem: IP address = …` line is
+kept exactly as in inetutils. inetutils reads bytes 4–7 of the ICMP header as an IP address,
+although RFC 792 defines byte 4 as a one-byte pointer. So pointer 20 shows as `20.0.0.0`.
+
+**When it shows.** Only if one of these two errors about our own echo request arrives. That is
+the only case where our output is shorter than inetutils', with or without `-v`.
+
+- **Source Quench** is obsolete. RFC 6633 (2012) deprecated it: routers must not send it any
+  more, hosts must ignore it, and Linux does not generate it.
+- **Parameter Problem** needs a malformed IP header (usually bad IP options). Our requests have
+  no options, and the kernel builds their IP header, so a router has nothing to complain about.
+
+**Why it's acceptable.**
+
+- **These cases practically never happen.** One message is deprecated, and the other cannot be
+  triggered by the packets ft_ping sends.
+- **The useful information is still printed.** The message line says what happened and which
+  machine reported it.
+- **The code is simpler.** About 35 lines of formatting code (table header, byte-order guess,
+  IP options dump) are gone, and `handle_icmp_error` no longer needs the quoted header pointer.
+- **It fits the subject.** We do a minimal implementation of ping, and the subject does not ask
+  for packet dumps.

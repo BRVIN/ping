@@ -12,8 +12,8 @@
 **   |             | type/code |                   | our seq           |
 **   +-------------+-----------+-------------------+-------------------+
 **
-** Errors are printed the same way with or without -v (see Compromise.md),
-** never stop the program and are not counted in the statistics.
+** Only the message line is printed, with or without -v (see Compromise.md);
+** errors never stop the program and are not counted in the statistics.
 */
 
 typedef struct s_icmp_code
@@ -106,44 +106,6 @@ static void	print_code_message(int type, int code, const char *prefix)
 }
 
 /*
-** Decoded view of the quoted IP header, then of our original request.
-** Printed for Source Quench and Parameter Problem, like inetutils without -v.
-*/
-static void	print_quoted_packet(struct iphdr *orig)
-{
-	struct icmphdr	*orig_icmp;
-	char			src[INET_ADDRSTRLEN];
-	char			dst[INET_ADDRSTRLEN];
-	unsigned char	*opt;
-	int				orig_hlen;
-	unsigned short	len;
-	int				i;
-
-	orig_hlen = orig->ihl * 4;
-	orig_icmp = (struct icmphdr *)((char *)orig + orig_hlen);
-	inet_ntop(AF_INET, &orig->saddr, src, sizeof(src));
-	inet_ntop(AF_INET, &orig->daddr, dst, sizeof(dst));
-	/* inetutils' byte order guess for the length field */
-	len = orig->tot_len;
-	if (len > 0x2000)
-		len = ntohs(len);
-	printf("Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src\tDst\tData\n");
-	printf(" %1x  %1x  %02x %04x %04x   %1x %04x  %02x  %02x %04x %s  %s ",
-		orig->version, orig->ihl, orig->tos, len, ntohs(orig->id),
-		(ntohs(orig->frag_off) & 0xe000) >> 13, ntohs(orig->frag_off) & 0x1fff,
-		orig->ttl, orig->protocol, ntohs(orig->check), src, dst);
-	/* IP options, if the quoted header has some */
-	opt = (unsigned char *)orig + sizeof(struct iphdr);
-	i = sizeof(struct iphdr);
-	while (i++ < orig_hlen)
-		printf("%02x", *opt++);
-	printf("\n");
-	printf("ICMP: type %u, code %u, size %u, id 0x%04x, seq 0x%04x\n",
-		orig_icmp->type, orig_icmp->code, ntohs(orig->tot_len) - orig_hlen,
-		ntohs(orig_icmp->un.echo.id), ntohs(orig_icmp->un.echo.sequence));
-}
-
-/*
 ** Called by recv_ping for the 5 ICMP error types only: Dest Unreachable,
 ** Source Quench, Redirect, Time Exceeded, Parameter Problem.
 */
@@ -165,7 +127,6 @@ static void	print_quoted_packet(struct iphdr *orig)
 void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct sockaddr_in *from)
 {
 	struct icmphdr	*icmp;
-	struct iphdr	*orig;
 	char			from_str[INET_ADDRSTRLEN];
 	char			gw_str[INET_ADDRSTRLEN];
 
@@ -173,7 +134,6 @@ void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct s
 	if (!is_from_us(ping, buf, n, ip_hlen))
 		return ;
 	icmp = (struct icmphdr *)(buf + ip_hlen);
-	orig = (struct iphdr *)(buf + ip_hlen + ICMP_HDR_LEN);
 	/* Numeric address only: no reverse DNS on returned packets (subject) */
 	inet_ntop(AF_INET, &from->sin_addr, from_str, sizeof(from_str));
 	printf("%ld bytes from %s: ", (long)(n - ip_hlen), from_str);
@@ -184,14 +144,11 @@ void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct s
 	else if (icmp->type == ICMP_TIME_EXCEEDED)
 		print_code_message(icmp->type, icmp->code, "Time exceeded");
 	else if (icmp->type == ICMP_SOURCE_QUENCH)
-	{
 		printf("Source Quench\n");
-		print_quoted_packet(orig);
-	}
 	else if (icmp->type == ICMP_PARAMETERPROB)
 	{
+		/* Bytes 4-7 read as an address, like inetutils (pointer = 1st byte) */
 		inet_ntop(AF_INET, &icmp->un.gateway, gw_str, sizeof(gw_str));
 		printf("Parameter problem: IP address = %s\n", gw_str);
-		print_quoted_packet(orig);
 	}
 }
