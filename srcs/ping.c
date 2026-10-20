@@ -135,7 +135,10 @@ void	recv_ping(t_ping *ping)
 	if (ntohs(icmp->un.echo.id) != ping->id)
 		return ;
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent))
+	{
+		fprintf(stderr, "ft_printf error: packet too short too hold ICMP Data");
 		return ;
+	}
 
 	//3. retrieve our send timestamp and calcul the difference with now 
 	memcpy(&sent, buf + ip_hlen + ICMP_HDR_LEN, sizeof(sent));
