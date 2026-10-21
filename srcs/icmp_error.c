@@ -171,16 +171,16 @@ static void	print_quoted_packet(struct iphdr *orig, int verbose)
 
 // possible ICMP types entering are :
 // [ICMP_DEST_UNREACH] [ICMP_SOURCE_QUENCH] [ICMP_REDIRECT] [ICMP_TIME_EXCEEDED] [ICMP_PARAMETERPROB]
-// they all have the same header :
+// they have similar headers, check obs repo
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |     Type      |     Code      |          Checksum             |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |    Pointer    |                   unused                      |
+// |            < different between types >                        |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |      Internet Header + 64 bits of Original Data Datagram      |
+// |      Internet Header + 64 bits of Original Data Datagram      |    ( this line for / dest unreach / time exceed / parameter prob / source quench / redirect)
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
-// they all send " The internet header plus the first 64 bits of the original datagram's data"
+// the one mentionned " The internet header plus the first 64 bits of the original datagram's data"
 // is_from_us checks it to see if we are the sender
 //
 void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct sockaddr_in *from)
