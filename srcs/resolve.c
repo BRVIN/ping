@@ -26,8 +26,8 @@
 // it put the ip retrieved ip in res->ai_addr.sin_addr , containing the ip under non readable binary form (4 bytes of the litteral ip value)
 
 // inet_ntop    (&ping->sockaddr.sin_addr) -> (ping->ip_str)
-// dump format conversion
-// it take the ip 4bbytes binary format :  &ping->sockaddr.sin_addr that was filled by getaddrinfo, and put it in readable form
+// dumb format conversion
+// it take the ip 4bbytes binary format :  &ping->sockaddr.sin_addr that was filled by getaddrinfo, and put it in readable form in ping->ip_str
 
 //           struct addrinfo {
 //               int              ai_flags;
@@ -68,6 +68,7 @@ int	resolve_host(t_ping *ping)
 	/* Take the first result; it is a sockaddr_in since we asked AF_INET */
 	memcpy(&ping->sockaddr, res->ai_addr, sizeof(struct sockaddr_in));
 	/* Copy before freeaddrinfo, which frees ai_canonname too */
+	//check// snprintf usage
 	if (res->ai_canonname)
 		snprintf(ping->canonname, sizeof(ping->canonname), "%s", res->ai_canonname);
 	else
@@ -75,6 +76,7 @@ int	resolve_host(t_ping *ping)
 	freeaddrinfo(res);
 
 	/* 4bytes Binary address -> printable ipv4 string, for display */
+	//check// secure
 	inet_ntop(AF_INET, &ping->sockaddr.sin_addr, ping->ip_str, sizeof(ping->ip_str));
 	return (0);
 }
