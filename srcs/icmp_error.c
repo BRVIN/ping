@@ -119,6 +119,11 @@ static void	print_code_message(int type, int code, const char *prefix)
 **
 ** The Data column (IP options) stays empty: our requests have none.
 */
+
+//  %02x with bytes[i] prints the byte in hexadecimal:
+//- x: hexadecimal, lowercase (af, not AF) - 2: at least 2 characters wide - 0: pad with zeros instead of spaces
+// and put spaces every second iteration : (i % 2) ? " " : ""
+
 static void	print_quoted_packet(struct iphdr *orig, int verbose)
 {
 	unsigned char	*bytes;
