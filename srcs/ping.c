@@ -112,6 +112,7 @@ void	recv_ping(t_ping *ping)
 	fromlen = sizeof(from);
 	n = recvfrom(ping->sockfd, buf, sizeof(buf), MSG_DONTWAIT,
 			(struct sockaddr *)&from, &fromlen);
+	//check// secure ?
 	if (n < 0)
 		return ;
 	now = now_us();
@@ -148,6 +149,7 @@ void	recv_ping(t_ping *ping)
 	{
 		inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
 		fprintf(stderr, "checksum mismatch from %s\n", from_str);
+		//check// should really continue like that here ?
 	}
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent))
 	{
@@ -170,6 +172,7 @@ void	recv_ping(t_ping *ping)
 
 	//5. Just display
 	/* n - ip_hlen = ICMP size (64), what real ping prints */
+	//check// secure ?
 	inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
 	printf("%ld bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms%s\n",
 		(long)(n - ip_hlen), from_str, seq, ip->ttl, rtt,
