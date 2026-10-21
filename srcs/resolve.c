@@ -15,9 +15,11 @@
 // 1: ping->addr [struct sockaddr_in] (with getaddrinfo function)
 // -> ping->addr.sin_addr [resulting IP binary form (4 raw bytes)]  (filled by getaddrinfo function)
 // 2: ping->ip_str [resulting ip readable form] (with inet_ntop function) 
-
+//
 // getaddrinfo   (ping->host) & (&hints) -> (&res)
 // getaddrinfo: take user input address (ping->host) and "hints" to check options and fill res with output
+// res is filled with an addrinfo struct that contain a pointer "ai_addr" to a sockaddr_in struct containing the searched ipv4 in "sin_addr" (check both structures on obsidian)
+// which is to say : res->ai_addr->sin_addr
 // If user input from ping->host is not yet ipv4, it does a real hostname resolution (DNS and stuff) (skipped if already ipv4)
 // 
 // It fill res->ai_addr which is a sockaddr_in because we asked for IPV4 (ai_family = AF_INET)
@@ -27,6 +29,21 @@
 // dump format conversion
 // it take the ip 4bbytes binary format :  &ping->addr.sin_addr that was filled by getaddrinfo, and put it in readable form
 
+//           struct addrinfo {
+//               int              ai_flags;
+//               int              ai_family;
+//               int              ai_socktype;
+//               int              ai_protocol;
+//               socklen_t        ai_addrlen;
+//               struct sockaddr *ai_addr;
+//               char            *ai_canonname;
+//               struct addrinfo *ai_next;
+//           };
+//                  struct sockaddr_in {
+//           sa_family_t     sin_family;     /* AF_INET */
+//           in_port_t       sin_port;       /* Port number */
+//           struct in_addr  sin_addr;       /* IPv4 address */
+//       };
 
 int	resolve_host(t_ping *ping)
 {
