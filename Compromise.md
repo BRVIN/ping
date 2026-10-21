@@ -76,108 +76,37 @@ ft_ping prints nothing.
 
 ---
 
-## 2. Minimal `-v`: only the id
+## 2. `-v` quoted packet: IP options are not printed
 
-**What we did.** With `-v`, ft_ping only adds the ICMP identifier to the first line:
-
-```
-PING host (1.2.3.4): 56 data bytes, id 0x1234 = 4660
-```
-
-Nothing else changes with `-v`. In `srcs/icmp_error.c`, `print_ip_dump()` and `print_icmp()`
-were removed (`print_quoted_packet()` was removed later, see entry 3).
-
-**inetutils behavior.** In `ping_echo.c`, `-v` (`OPT_VERBOSE`) also changes how ICMP errors
-about our packets are printed:
-
-- **Dest Unreachable, Redirect, Time Exceeded** (line 377): after the message line, it prints
-  the quoted packet, as a decoded table of the IP header followed by an
-  `ICMP: type …, code …, size …, id …, seq …` line.
-- **All error types** (line 309): before that table, it prints the raw bytes of the quoted IP
-  header (`IP Hdr Dump:`).
-
-Without `-v`, inetutils prints only the message line for these three types. For Source Quench
-and Parameter Problem, it prints the message line and then the decoded table, but no
-`IP Hdr Dump:`.
-
-**ft_ping behavior.** Errors are printed the same way with or without `-v`: for Dest
-Unreachable / Redirect / Time Exceeded, `N bytes from X: <message>` only, which is exactly
-inetutils' output **without** `-v`. (Source Quench and Parameter Problem: see entry 3.)
-
-**When it shows.** Only when **both** of these are true:
-
-- `-v` is given;
-- an ICMP error about one of our packets arrives (unreachable host, TTL expired, …).
-
-Echo replies, the `PING` line, statistics and every output without `-v` are identical to
-inetutils.
-
-**Why it's acceptable.**
-
-- **The useful information is still printed.** The error message line, which tells what went
-  wrong and which machine reported it, appears with or without `-v`. The extra `-v` output is a
-  low-level dump of our own request, which we already know.
-- **It fits the subject.** We do a minimal implementation of ping, and the subject asks for
-  `-v` without describing these dumps. Keeping the id display still makes `-v` visibly do
-  something, like inetutils.
-- **Output without `-v` is unchanged** by this entry, so the default behavior still matches the
-  reference (apart from entry 3).
-- **The code is simpler.** The hex dump and the verbose-only branches are gone.
-
----
-
-## 3. No quoted packet for Source Quench and Parameter Problem
-
-**What we did.** For these two error types, ft_ping prints only the message line:
+**What we did.** After the message line of an ICMP error about our request,
+`print_quoted_packet()` (`srcs/icmp_error.c`) prints the quoted packet like inetutils: with
+`-v` for every error type, and also without `-v` for Source Quench and Parameter Problem (in
+that case without the `IP Hdr Dump:` lines):
 
 ```
-N bytes from X: Source Quench
-N bytes from X: Parameter problem: pointer = 20
-```
-
-(The `pointer = …` wording is itself a difference from inetutils: see entry 4.)
-
-`print_quoted_packet()` was removed from `srcs/icmp_error.c`. With this entry and entry 2, every
-ICMP error now prints exactly one line, with or without `-v`.
-
-**inetutils behavior.** In its ICMP type table (`ping_echo.c:392`), Source Quench calls
-`print_ip_data` directly, and `print_parameterprob` (`ping_echo.c:382`) calls it too. Neither
-checks `-v`. So for these two types, inetutils always prints the decoded quoted packet after the
-message, even without `-v`:
-
-```
+92 bytes from 192.168.122.1: Time to live exceeded
+IP Hdr Dump:
+ 4500 0054 be8f 4000 0101 6fb2 c0a8 7aaf 0808 0808 
 Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src	Dst	Data
- 4  5  00 0054 1234   2 0000  40  01 abcd 192.168.1.2  8.8.8.8
-ICMP: type 8, code 0, size 64, id 0x1234, seq 0x0003
+ 4  5  00 0054 be8f   2 0000  01  01 6fb2 192.168.122.175  8.8.8.8 
+ICMP: type 8, code 0, size 64, id 0x059d, seq 0x0000
 ```
 
-RFC 792 does not ask for this. It describes the messages, not what a ping program should print.
-It is a display choice of inetutils.
+**inetutils behavior.** `print_ip_header` (`ping_echo.c:301`) also prints the quoted IP options
+in hex in the `Data` column, and guesses the byte order of the `Len` field.
 
-**ft_ping behavior.** The message line only.
+**ft_ping behavior.** The `Data` column is always empty, and `Len` is always read in network
+byte order.
 
-**When it shows.** Only if one of these two errors about our own echo request arrives. That is
-the only case where our output is shorter than inetutils', with or without `-v`.
+**When it shows.** Never in practice: our requests carry no IP options (the kernel builds their
+IP header), and the quoted header comes from the network, so it is always in network order.
 
-- **Source Quench** is obsolete. RFC 6633 (2012) deprecated it: routers must not send it any
-  more, hosts must ignore it, and Linux does not generate it.
-- **Parameter Problem** needs a malformed IP header (usually bad IP options). Our requests have
-  no options, and the kernel builds their IP header, so a router has nothing to complain about.
-
-**Why it's acceptable.**
-
-- **These cases practically never happen.** One message is deprecated, and the other cannot be
-  triggered by the packets ft_ping sends.
-- **The useful information is still printed.** The message line says what happened and which
-  machine reported it.
-- **The code is simpler.** About 35 lines of formatting code (table header, byte-order guess,
-  IP options dump) are gone, and `handle_icmp_error` no longer needs the quoted header pointer.
-- **It fits the subject.** We do a minimal implementation of ping, and the subject does not ask
-  for packet dumps.
+**Why it's acceptable.** The output is identical for every packet ft_ping can send (checked
+against inetutils with `ping -v --ttl=1 8.8.8.8` on the VM), and the code stays short.
 
 ---
 
-## 4. Parameter Problem: print the pointer, not an "IP address"
+## 3. Parameter Problem: print the pointer, not an "IP address"
 
 **What we did.** For a Parameter Problem message, ft_ping prints the pointer as a number:
 
@@ -218,9 +147,9 @@ This has two mistakes:
 
 **ft_ping behavior.** We read only byte 4 and print it as a number, following the RFC.
 
-**When it shows.** Only when a Parameter Problem about our own echo request arrives. As explained
-in entry 3, this practically never happens. Our requests have no IP options, and the kernel
-builds their IP header.
+**When it shows.** Only when a Parameter Problem about our own echo request arrives. This practically
+never happens: it needs a malformed IP header (usually bad IP options), but our requests have no
+options, and the kernel builds their IP header.
 
 **Why it's acceptable.**
 
