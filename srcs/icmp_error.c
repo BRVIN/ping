@@ -75,7 +75,7 @@ static int	is_from_us(t_ping *ping, char *buf, ssize_t n, int ip_hlen)
 		return (0);
 	orig_icmp = (struct icmphdr *)((char *)orig + orig_hlen);
 
-	if (orig->daddr != ping->addr.sin_addr.s_addr
+	if (orig->daddr != ping->sockaddr.sin_addr.s_addr
 		|| orig->protocol != IPPROTO_ICMP
 		|| orig_icmp->type != ICMP_ECHO
 		|| ntohs(orig_icmp->un.echo.id) != ping->id) {

@@ -34,7 +34,7 @@ int	send_ping(t_ping *ping)
 	dup_clear(ping, ping->transmitted & 0xFFFF);
 	/* The kernel builds the IP header around our ICMP packet */
 	if (sendto(ping->sockfd, packet, PACKET_LEN, 0,
-			(struct sockaddr *)&ping->addr, sizeof(ping->addr)) < 0)
+			(struct sockaddr *)&ping->sockaddr, sizeof(ping->sockaddr)) < 0)
 	{
 		fprintf(stderr, "ft_ping: sending packet: %s\n", strerror(errno));
 		return (-1);

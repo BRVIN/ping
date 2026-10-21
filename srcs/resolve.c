@@ -12,8 +12,8 @@
 //
 //resolve_host
 // take the user input (ping->host) and fill 2 data :
-// 1: ping->addr [struct sockaddr_in] (with getaddrinfo function)
-// -> ping->addr.sin_addr [resulting IP binary form (4 raw bytes)]  (filled by getaddrinfo function)
+// 1: ping->sockaddr [struct sockaddr_in] (with getaddrinfo function)
+// -> ping->sockaddr.sin_addr [resulting IP binary form (4 raw bytes)]  (filled by getaddrinfo function)
 // 2: ping->ip_str [resulting ip readable form] (with inet_ntop function) 
 //
 // getaddrinfo   (ping->host) & (&hints) -> (&res)
@@ -25,9 +25,9 @@
 // It fill res->ai_addr which is a sockaddr_in because we asked for IPV4 (ai_family = AF_INET)
 // it put the ip retrieved ip in res->ai_addr.sin_addr , containing the ip under non readable binary form (4 bytes of the litteral ip value)
 
-// inet_ntop    (&ping->addr.sin_addr) -> (ping->ip_str)
+// inet_ntop    (&ping->sockaddr.sin_addr) -> (ping->ip_str)
 // dump format conversion
-// it take the ip 4bbytes binary format :  &ping->addr.sin_addr that was filled by getaddrinfo, and put it in readable form
+// it take the ip 4bbytes binary format :  &ping->sockaddr.sin_addr that was filled by getaddrinfo, and put it in readable form
 
 //           struct addrinfo {
 //               int              ai_flags;
@@ -66,7 +66,7 @@ int	resolve_host(t_ping *ping)
 		return (1);
 	}
 	/* Take the first result; it is a sockaddr_in since we asked AF_INET */
-	memcpy(&ping->addr, res->ai_addr, sizeof(struct sockaddr_in));
+	memcpy(&ping->sockaddr, res->ai_addr, sizeof(struct sockaddr_in));
 	/* Copy before freeaddrinfo, which frees ai_canonname too */
 	if (res->ai_canonname)
 		snprintf(ping->canonname, sizeof(ping->canonname), "%s", res->ai_canonname);
@@ -75,6 +75,6 @@ int	resolve_host(t_ping *ping)
 	freeaddrinfo(res);
 
 	/* 4bytes Binary address -> printable ipv4 string, for display */
-	inet_ntop(AF_INET, &ping->addr.sin_addr, ping->ip_str, sizeof(ping->ip_str));
+	inet_ntop(AF_INET, &ping->sockaddr.sin_addr, ping->ip_str, sizeof(ping->ip_str));
 	return (0);
 }
