@@ -53,6 +53,16 @@ unsigned short	checksum(void *data, int len)
 // we use id to identify our ping and seq to differentiate the packets we send
 // internet protocols often use big endian byte order as defined for ICMP in the RFC, and most modern cpu use little endian
 // that s why the variables above 1 byte (id and sequence) need htons convertion (not the checksum for some magic shit)
+// We fill [Data] with the timestamp followed by dumb incremental number succession
+//
+// We will build the packet icmp part respecting the icmp echo header defined in RFC792 :
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |     Type      |     Code      |          Checksum             |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |           Identifier          |        Sequence Number        |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |     Data ...
+//   +-+-+-+-+-
 
 void	build_packet(t_ping *ping, char *packet, int seq)
 {
@@ -71,6 +81,7 @@ void	build_packet(t_ping *ping, char *packet, int seq)
 	icmp->un.echo.sequence = htons(seq);
 
 	/* Data part: timestamp first, then a recognisable pattern */
+	//check// secure?
 	gettimeofday(&tv, NULL);
 	memcpy(packet + ICMP_HDR_LEN, &tv, sizeof(tv));
 	// Filling the rest of data part with just an incremental number sequence ... :
