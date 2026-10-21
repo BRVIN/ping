@@ -30,6 +30,7 @@ int	main(int argc, char **argv)
 	** 2. Raw socket: we write the ICMP header ourselves, the kernel adds
 	**    the IP header. Needs root (or CAP_NET_RAW) -> run with sudo.
 	*/
+	//check// should I put it before resolve_host
 	ping.sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (ping.sockfd < 0)
 	{
@@ -42,6 +43,7 @@ int	main(int argc, char **argv)
 	}
 	/* Like inetutils: allow sending to a broadcast address (no effect otherwise) */
 	one = 1;
+	//check//secure
 	setsockopt(ping.sockfd, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one));
 
 	printf("PING %s (%s): %d data bytes", ping.canonname, ping.ip_str, PING_DATA_LEN);

@@ -39,7 +39,7 @@ typedef struct s_ping
 	char				ip_str[INET_ADDRSTRLEN];    /* "142.250.x.x" */
 	struct sockaddr_in	sockaddr;                   /* destination for sendto() */
 	int					sockfd;                     /* raw ICMP socket */
-	unsigned short		id;                         /* identifies OUR packets */
+	unsigned short		id;                         /* identifies OUR packets, 2 bytes to match the id space from icmp echo header */
 
 	long				transmitted;                /* packets sent = seq of the next one */
 	long				received;                   /* echo replies (duplicates excluded) */

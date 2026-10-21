@@ -26,6 +26,9 @@ static int	dup_test_and_set(t_ping *ping, int seq)
 ** like inetutils which uses ping_num_xmit as the sequence number).
 ** A sendto failure is fatal, like inetutils ("sending packet: ...").
 */
+// note : we put mask 0xFFFF on ping->transmitted because "sequence number" size of echo header is 2 bytes (check RFS)
+// So the value with cycle (65534 -> 65535 -> 0 -> 1)
+// that's not a problem to the sequence number flow (ping 0 and ping 65535 will have same seq number, not a problem)
 int	send_ping(t_ping *ping)
 {
 	char	packet[PACKET_LEN];
