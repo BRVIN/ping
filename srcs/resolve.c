@@ -69,8 +69,7 @@ int	resolve_host(t_ping *ping)
 	memcpy(&ping->addr, res->ai_addr, sizeof(struct sockaddr_in));
 	/* Copy before freeaddrinfo, which frees ai_canonname too */
 	if (res->ai_canonname)
-		snprintf(ping->canonname, sizeof(ping->canonname), "%s",
-			res->ai_canonname);
+		snprintf(ping->canonname, sizeof(ping->canonname), "%s", res->ai_canonname);
 	else
 		snprintf(ping->canonname, sizeof(ping->canonname), "%s", ping->host);
 	freeaddrinfo(res);
