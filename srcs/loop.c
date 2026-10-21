@@ -17,6 +17,7 @@ long long	now_us(void)
 {
 	struct timeval	tv;
 
+	//check// secure
 	gettimeofday(&tv, NULL);
 	return ((long long)tv.tv_sec * 1000000LL + tv.tv_usec);
 }
