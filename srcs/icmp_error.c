@@ -183,32 +183,37 @@ static void	print_quoted_packet(struct iphdr *orig, int verbose)
 // the one mentionned " The internet header plus the first 64 bits of the original datagram's data"
 // is_from_us checks it to see if we are the sender
 //
-void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, struct sockaddr_in *from)
+void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, const char *from_str)
 {
 	struct icmphdr	*icmp;
-	char			from_str[INET_ADDRSTRLEN];
 
 	// check "IH+64" data to see if we are the sender, ignore if we are not
 	if (!is_from_us(ping, buf, n, ip_hlen))
 		return ;
 	icmp = (struct icmphdr *)(buf + ip_hlen);
 	/* Numeric address only: no reverse DNS on returned packets (subject) */
-	inet_ntop(AF_INET, &from->sin_addr, from_str, sizeof(from_str));
 	printf("%ld bytes from %s: ", (long)(n - ip_hlen), from_str);
-	if (icmp->type == ICMP_DEST_UNREACH)
-		print_code_message(icmp->type, icmp->code, "Dest Unreachable");
-	else if (icmp->type == ICMP_REDIRECT)
-		print_code_message(icmp->type, icmp->code, "Redirect");
-	else if (icmp->type == ICMP_TIME_EXCEEDED)
-		print_code_message(icmp->type, icmp->code, "Time exceeded");
-	else if (icmp->type == ICMP_SOURCE_QUENCH)
-		printf("Source Quench\n");
-	else if (icmp->type == ICMP_PARAMETERPROB)
-		printf("Parameter problem: pointer = %u\n",
-			((unsigned char *)icmp)[4]);
+
+	switch(icmp->type) {
+
+		case ICMP_DEST_UNREACH:
+			print_code_message(icmp->type, icmp->code, "Dest Unreachable");
+			break;
+		case ICMP_REDIRECT:
+			print_code_message(icmp->type, icmp->code, "Redirect");
+			break;
+		case ICMP_TIME_EXCEEDED:
+			print_code_message(icmp->type, icmp->code, "Time exceeded");
+			break;
+		case ICMP_SOURCE_QUENCH:
+			printf("Source Quench\n");
+			break;
+		case ICMP_PARAMETERPROB:
+			printf("Parameter problem: pointer = %u\n", ((unsigned char *)icmp)[4]);
+			break;
+	}
 	/* Like inetutils: quoted packet always for these two, else only with -v */
 	if (ping->verbose || icmp->type == ICMP_SOURCE_QUENCH
 		|| icmp->type == ICMP_PARAMETERPROB)
-		print_quoted_packet((struct iphdr *)(buf + ip_hlen + ICMP_HDR_LEN),
-			ping->verbose);
+		print_quoted_packet((struct iphdr *)(buf + ip_hlen + ICMP_HDR_LEN), ping->verbose);
 }

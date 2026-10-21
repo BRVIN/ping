@@ -64,11 +64,11 @@ void			build_packet(t_ping *ping, char *buf, int seq);
 
 /* ping.c */
 int				send_ping(t_ping *ping);
-void			recv_ping(t_ping *ping);
+int			recv_ping(t_ping *ping);
 
 /* icmp_error.c */
 void			handle_icmp_error(t_ping *ping, char *buf, ssize_t n,
-					int ip_hlen, struct sockaddr_in *from);
+					int ip_hlen, const char *from_str);
 
 /* loop.c */
 long long		now_us(void);

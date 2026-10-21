@@ -1,4 +1,5 @@
 #include "../includes/ft_ping.h"
+#include <netdb.h>
 
 /*
 ** Turns "google.com" or "8.8.8.8" into a struct sockaddr_in.
@@ -60,23 +61,45 @@ int	resolve_host(t_ping *ping)
 	hints.ai_flags = AI_CANONNAME;
 
 	// getaddrinfo: take user input written address (ping->host) and "hints" to check options and fill res with output
-	if (getaddrinfo(ping->host, NULL, &hints, &res) != 0)
+	//art//
+	const int fred = getaddrinfo(ping->host, NULL, &hints, &res);
+	if (fred != 0)
 	{
-		fprintf(stderr, "ft_ping: unknown host\n");
+		//fprintf(stderr, "ft_ping: unknown host\n");
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(fred)); //art//
 		return (1);
 	}
 	/* Take the first result; it is a sockaddr_in since we asked AF_INET */
 	memcpy(&ping->sockaddr, res->ai_addr, sizeof(struct sockaddr_in));
 	/* Copy before freeaddrinfo, which frees ai_canonname too */
 	//check// snprintf usage
+	
+	//art//
+	//
+	if(res->ai_canonname)
+		memcpy(ping->canonname, res->ai_canonname, strlen(res->ai_canonname) + 1);
+	else
+		memcpy(ping->canonname, ping->host, strlen(ping->host) + 1);
+
+	freeaddrinfo(res);
+	
+	/*
 	if (res->ai_canonname)
 		snprintf(ping->canonname, sizeof(ping->canonname), "%s", res->ai_canonname);
 	else
 		snprintf(ping->canonname, sizeof(ping->canonname), "%s", ping->host);
 	freeaddrinfo(res);
+	*/
 
 	/* 4bytes Binary address -> printable ipv4 string, for display */
 	//check// secure
-	inet_ntop(AF_INET, &ping->sockaddr.sin_addr, ping->ip_str, sizeof(ping->ip_str));
+	
+
+	if (!inet_ntop(AF_INET, &ping->sockaddr.sin_addr, ping->ip_str, sizeof(ping->ip_str))) {
+		fprintf(stderr, "inet_ntop: %s\n", strerror(errno));
+		return (1);
+	}
+	
+
 	return (0);
 }

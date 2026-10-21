@@ -92,7 +92,7 @@ void	build_packet(t_ping *ping, char *packet, int seq)
 	while (i < filler_len)
 	{
 		filler[i] = i;
-		i++;
+		++i;
 	}
 
 	/* Checksum is computed LAST, with the checksum field still at 0 */

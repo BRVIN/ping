@@ -13,6 +13,7 @@ static void	on_sigint(int sig)
 }
 
 /* Current time as one integer: microseconds since 1970 */
+// to change before 2038
 long long	now_us(void)
 {
 	struct timeval	tv;
@@ -79,13 +80,16 @@ int	ping_loop(t_ping *ping)
 			//signal caught :
 			if (errno == EINTR)
 				continue ;
-			perror("ft_ping: select");
+
+			fprintf(stderr, "select: %s\n", strerror(errno)); //art//
+		//perror("ft_ping: select");
+
 			return (-1);
 		}
 
 		//3. RECEIVE PACKET  (if one available)
-		if (ret > 0)
-			recv_ping(ping);
+		if (ret > 0 && recv_ping(ping))
+			return (-1);
 
 		//4. SEND PACKET (supposed to always go in with select timeout wait i think)
 		if (now_us() >= next_send)

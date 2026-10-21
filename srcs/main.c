@@ -6,6 +6,7 @@ int	main(int argc, char **argv)
 	int		one;
 
 	//setvbuf: to have output always print directly, it's like doing fflush(stdout) after every print
+	//art// pas forcement indispensable, augmente les syscall
 	setvbuf(stdout, NULL, _IOLBF, 0);
 
 	if (argc == 1) {
@@ -24,7 +25,7 @@ int	main(int argc, char **argv)
 
 	/* 1. hostname / IP string -> struct sockaddr_in */
 	if (resolve_host(&ping) != 0)
-		return (1);
+		return (64);
 
 	/*
 	** 2. Raw socket: we write the ICMP header ourselves, the kernel adds
@@ -34,17 +35,27 @@ int	main(int argc, char **argv)
 	ping.sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (ping.sockfd < 0)
 	{
-		/* Not root (and no CAP_NET_RAW): same message as inetutils */
+		fprintf(stderr, "socket: %s\n", strerror(errno));
+		return (64);
+
+		/*
+		// Not root (and no CAP_NET_RAW): same message as inetutils
 		if (errno == EPERM || errno == EACCES)
-			fprintf(stderr, "ft_ping: Lacking privilege for icmp socket.\n");
+			fprintf(stderr, "ft_ping: Failed to create socket\n%s\n", strerror(errno));
+			//fprintf(stderr, "ft_ping: Lacking privilege for icmp socket.\n");
 		else
 			fprintf(stderr, "ft_ping: %s\n", strerror(errno));
 		return (1);
+		*/
 	}
 	/* Like inetutils: allow sending to a broadcast address (no effect otherwise) */
 	one = 1;
 	//check//secure
-	setsockopt(ping.sockfd, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one));
+	if (setsockopt(ping.sockfd, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one)) != 0) {
+		fprintf(stderr, "setsockopt: %s\n", strerror(errno));
+		return (64);
+	}
+
 
 	printf("PING %s (%s): %d data bytes", ping.canonname, ping.ip_str, PING_DATA_LEN);
 	if (ping.verbose)
@@ -63,5 +74,6 @@ int	main(int argc, char **argv)
 	/* Like inetutils: success only if at least one reply came back */
 	if (ping.received == 0)
 		return (1);
+
 	return (0);
 }

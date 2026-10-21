@@ -1,4 +1,8 @@
 #include "../includes/ft_ping.h"
+#include <asm-generic/errno-base.h>
+#include <asm-generic/errno.h>
+#include <math.h>
+#include <netdb.h>
 
 /*
 ** Duplicate table: one cell per sequence number (modulo DUP_TABLE_SIZE).
@@ -37,11 +41,20 @@ int	send_ping(t_ping *ping)
 	build_packet(ping, packet, ping->transmitted & 0xFFFF);
 	dup_clear(ping, ping->transmitted & 0xFFFF);
 	/* The kernel builds the IP header around our ICMP packet */
-	if (sendto(ping->sockfd, packet, PACKET_LEN, 0,
-			(struct sockaddr *)&ping->sockaddr, sizeof(ping->sockaddr)) < 0)
-	{
-		fprintf(stderr, "ft_ping: sending packet: %s\n", strerror(errno));
-		return (-1);
+	while(1){
+		const ssize_t n = sendto(ping->sockfd, packet, PACKET_LEN, 0, (struct sockaddr *)&ping->sockaddr, sizeof(ping->sockaddr));
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+			fprintf(stderr, "sendto: %s\n", strerror(errno));
+			return (-1);
+		}
+		//art//
+		if (n != PACKET_LEN) {
+			fprintf(stderr, "sendto: Packet not fully sent");
+			return (0);
+		}
+		break;
 	}
 	ping->transmitted++;
 	return (0);
@@ -92,78 +105,81 @@ static void	update_rtt(t_ping *ping, double rtt)
 // Timestamp / address mask replies answer requests we never send.
 // not errors, someone else ping us or stuff like this
 //
-void	recv_ping(t_ping *ping)
+int	recv_ping(t_ping *ping)
 {
-	char				buf[1024];
-	char				from_str[INET_ADDRSTRLEN];
-	struct sockaddr_in	from;
-	socklen_t			fromlen;
-	ssize_t				n;
-	struct iphdr		*ip;
-	struct icmphdr		*icmp;
-	int					ip_hlen;
-	struct timeval		sent;
-	long long			now;
-	double				rtt;
-	int					seq;
-	int					dup;
+
+	char buf[1024];
+	struct sockaddr_in from;
+	socklen_t fromlen = sizeof(from);
 
 	// 1. receive packet content into buf
-	fromlen = sizeof(from);
-	n = recvfrom(ping->sockfd, buf, sizeof(buf), MSG_DONTWAIT,
-			(struct sockaddr *)&from, &fromlen);
-	//check// secure ?
-	if (n < 0)
-		return ;
-	now = now_us();
+	
+	ssize_t n;
+
+	while (1) {
+		n = recvfrom(ping->sockfd, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+			// nothing to read
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				return (0);
+			fprintf(stderr, "recvfrom: %s\n", strerror(errno)); //art//
+			return (-1);
+		}
+		break;
+	}
+		//return ;
+	const long long now = now_us();
 	//debug_print_packet(buf, n);
 
 	//2. get ip content (for good structure and clarity)
-	ip = (struct iphdr *)buf;
-	ip_hlen = ip->ihl * 4;
+	const struct iphdr* ip = (struct iphdr *)buf;
+	const int ip_hlen = ip->ihl * 4;
 	/* Too short to contain the IP header + the ICMP header: same message as inetutils */
+	char from_str[INET_ADDRSTRLEN] = "unknown";
+
+	(void)inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
+
 	if (n < ip_hlen + ICMP_HDR_LEN) {
-		inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
 		fprintf(stderr, "packet too short (%ld bytes) from %s\n", (long)n, from_str);
-		return ;
+		return (0);
 	}
-	icmp = (struct icmphdr *)(buf + ip_hlen);
+	struct icmphdr* icmp = (struct icmphdr *)(buf + ip_hlen);
 
 	//3. ICMP content check now
 	/* ICMP errors (RFC 792): they quote the packet that failed, maybe ours */
-	if (icmp->type == ICMP_DEST_UNREACH || icmp->type == ICMP_SOURCE_QUENCH
-		|| icmp->type == ICMP_REDIRECT || icmp->type == ICMP_TIME_EXCEEDED
-		|| icmp->type == ICMP_PARAMETERPROB)
-	{
-		handle_icmp_error(ping, buf, n, ip_hlen, &from);
-		return ;
+	if (icmp->type == ICMP_DEST_UNREACH || icmp->type == ICMP_SOURCE_QUENCH ||
+	    icmp->type == ICMP_REDIRECT     || icmp->type == ICMP_TIME_EXCEEDED ||
+	    icmp->type == ICMP_PARAMETERPROB) {
+		handle_icmp_error(ping, buf, n, ip_hlen, from_str);
+		return (0);
 	}
 	/* Requests, other replies, unknown types: not for us */
 	if (icmp->type != ICMP_ECHOREPLY)
-		return ;
+		return (0);
 	/* Echo reply for another process: skip it */
 	if (ntohs(icmp->un.echo.id) != ping->id)
-		return ;
+		return (0);
 
 	if (checksum(icmp, n - ip_hlen) != 0)
-	{
-		inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
 		fprintf(stderr, "checksum mismatch from %s\n", from_str);
-		//check// should really continue like that here ?
-	}
-	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent))
-	{
+	//check//
+
+	struct timeval		sent;
+
+	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent)) {
 		fprintf(stderr, "ft_ping error: packet to short too hold ICMP Data\n");
-		return ;
+		return (0);
 	}
 
 	//3. retrieve our send timestamp and calcul the difference with now 
 	memcpy(&sent, buf + ip_hlen + ICMP_HDR_LEN, sizeof(sent));
-	rtt = (now - ((long long)sent.tv_sec * 1000000LL + sent.tv_usec)) / 1000.0;
+	double rtt = (now - ((long long)sent.tv_sec * 1000000LL + sent.tv_usec)) / 1000.0;
 
 	//4. Packet logic: update packet structures and stats
-	seq = ntohs(icmp->un.echo.sequence);
-	dup = dup_test_and_set(ping, seq);
+	int seq = ntohs(icmp->un.echo.sequence);
+	int dup = dup_test_and_set(ping, seq);
 	if (dup)
 		ping->duplicates++;
 	else
@@ -173,8 +189,8 @@ void	recv_ping(t_ping *ping)
 	//5. Just display
 	/* n - ip_hlen = ICMP size (64), what real ping prints */
 	//check// secure ?
-	inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
 	printf("%ld bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms%s\n",
 		(long)(n - ip_hlen), from_str, seq, ip->ttl, rtt,
 		dup ? " (DUP!)" : "");
+	return (0);
 }

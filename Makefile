@@ -1,7 +1,7 @@
 NAME	= ft_ping
 
 CC		= cc
-CFLAGS	= -Wall -Wextra -Werror -Iincludes
+CFLAGS	= -Wall -Wextra -Werror -Wpedantic -std=gnu99 -Iincludes -O1
 
 SRCS	= srcs/main.c \
 		  srcs/resolve.c \
@@ -17,16 +17,16 @@ OBJS	= $(SRCS:.c=.o)
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(NAME)
+	$(CC) $(OBJS) -o $(NAME)
 
 %.o: %.c includes/ft_ping.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS)
+	@rm -vf $(OBJS)
 
 fclean: clean
-	rm -f $(NAME)
+	@rm -vf $(NAME)
 
 re: fclean all
 
