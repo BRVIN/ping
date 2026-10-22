@@ -62,11 +62,11 @@ int	resolve_host(t_ping *ping)
 
 	// getaddrinfo: take user input written address (ping->host) and "hints" to check options and fill res with output
 	//art//
-	const int fred = getaddrinfo(ping->host, NULL, &hints, &res);
-	if (fred != 0)
+	const int ret = getaddrinfo(ping->host, NULL, &hints, &res);
+	if (ret != 0)
 	{
 		//fprintf(stderr, "ft_ping: unknown host\n");
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(fred)); //art//
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ret)); //art//
 		fprintf(stderr, "(unknown host)\n"); //art//
 		return (1);
 	}
@@ -75,22 +75,12 @@ int	resolve_host(t_ping *ping)
 	/* Copy before freeaddrinfo, which frees ai_canonname too */
 	//check// snprintf usage
 	
-	//art//
-	//
-	if(res->ai_canonname)
-		memcpy(ping->canonname, res->ai_canonname, strlen(res->ai_canonname) + 1);
-	else
-		memcpy(ping->canonname, ping->host, strlen(ping->host) + 1);
-
-	freeaddrinfo(res);
-	
-	/*
 	if (res->ai_canonname)
 		snprintf(ping->canonname, sizeof(ping->canonname), "%s", res->ai_canonname);
 	else
 		snprintf(ping->canonname, sizeof(ping->canonname), "%s", ping->host);
+
 	freeaddrinfo(res);
-	*/
 
 	/* 4bytes Binary address -> printable ipv4 string, for display */
 	//check// secure
