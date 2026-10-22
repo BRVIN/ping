@@ -64,7 +64,7 @@ void	get_check_host(int argc, char **argv, t_ping *ping)
 	//checking format of potential host, has to be ipv4 or domain name character only
 	while (str[i])
 	{
-		if(!isalnum((unsigned char)str[i]) && str[i] != '-' && str[i] != '.')
+	        if(!isalnum((unsigned char)str[i]) && str[i] != '-' && str[i] != '.' && str[i] != '_')
 		{
 			fprintf(stderr, "ft_ping: unknown host\n");
 			exit(1);
