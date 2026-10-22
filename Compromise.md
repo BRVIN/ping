@@ -163,33 +163,44 @@ options, and the kernel builds their IP header.
 
 ---
 
-## 4. `recvfrom` error: reported and ignored, never fatal
+## 4. Socket errors: `sendto` is fatal, `recvfrom` is not
 
-**What we did.** In `recv_ping` (`srcs/ping.c`), when `recvfrom` fails with anything other than
-`EINTR` (retried) or `EAGAIN` / `EWOULDBLOCK` (nothing to read), ft_ping prints
-`recvfrom: <strerror>` on stderr and returns to the loop. The packet is treated as lost.
-`recv_ping` can therefore never fail, and `ping_loop` only stops on a `sendto` or `select`
-failure.
+**What we did.** The two socket calls of the main loop handle a failure differently:
 
-**inetutils behavior.** `ping_recv()` (`libping.c`) returns -1 on a `recvfrom` error without
-printing anything. `ping_run()` ignores that return value and keeps looping. The user never
-learns that a read failed.
+| Call | inetutils 2.0 | ft_ping |
+|---|---|---|
+| `sendto` fails | `ping: sending packet: <strerror>` on stderr, exit 1, **no statistics** | `sendto: <strerror>` on stderr, exit 1, **no statistics** |
+| `sendto` short write | counted as transmitted, prints `ping: wrote <host> 64 chars, ret=N`, continues | prints `sendto: Packet not fully sent`, not counted, continues |
+| `recvfrom` fails | ignored **silently**, loop continues | `recvfrom: <strerror>` on stderr, loop continues |
 
-**ft_ping behavior.** Same loop behavior (keep pinging, statistics preserved), plus one error
-line on stderr.
+`EINTR` is retried and `EAGAIN` means "nothing to read" in both programs; the table is about
+the other errors.
 
-**When it shows.** Practically never. After `select` reported the socket readable, the only
-realistic `recvfrom` failures on a raw ICMP socket are `ENOMEM` / `ENOBUFS` under kernel memory
-pressure. The other documented errors (`EBADF`, `EFAULT`, `EINVAL`...) can only come from a bug
-in our own code. There is no connection and no error queue, so no `ECONNREFUSED`-style errors.
+**Where we are similar.** The loop logic is the same: a failed send ends the run with status 1
+and without statistics, a failed read costs at most one reply and the run goes on. The exit
+codes are identical in every case.
 
-**Why it's acceptable.**
+**Where we differ.**
 
-- **Same robustness as inetutils.** A transient kernel error costs one reply, not the whole
-  session: the run goes on and the statistics are still printed at the end.
-- **Better visibility.** inetutils hides the error; we show it, like we already do for
-  `packet too short` and `checksum mismatch`.
-- **Consistent with the send side.** A `sendto` failure stays fatal (as in inetutils), because
-  ping cannot do its job without sending. A single failed read does not prevent it.
-- **Before this change** ft_ping exited with status 1 and no statistics on such an error. That
-  was stricter than the reference, not better: it threw away everything measured so far.
+- `recvfrom`: we print one line where inetutils prints nothing.
+- `sendto`: the message prefix is `sendto:` instead of `ping: sending packet:`.
+- Short write: we do not count the packet and the wording differs. Unreachable in practice on a
+  raw socket (the kernel writes the whole datagram or fails).
+
+**Why.**
+
+- **A send failure is fatal because ping cannot do its job without sending.** The errors a raw
+  socket really returns (no route, network or host unreachable, firewall rejecting output,
+  message too big) do not fix themselves within the next second. inetutils exits, the subject
+  says to follow it, and a script relies on that exit status.
+- **A read failure is not fatal because it costs one reply, not the session.** The only realistic
+  errors after `select` said "readable" are `ENOMEM` / `ENOBUFS` under memory pressure; the others
+  (`EBADF`, `EFAULT`...) would be bugs in our own code. Exiting there would throw away every
+  measurement made so far, which is worse than inetutils' behavior, so we keep its loop logic.
+- **We print the read error because hiding it helps nobody.** It costs one stderr line and is
+  consistent with the `packet too short` and `checksum mismatch` messages we already print.
+- **The `sendto` wording is a leftover, not a choice.** The `sendto:` prefix could be aligned
+  on `ft_ping: sending packet:` at no cost; nothing in the loop depends on it.
+- **History.** ft_ping used to exit on a `recvfrom` error as well. That was stricter than the
+  reference, not better: it lost the whole session for one unreadable packet. It was changed
+  to the behavior above.
