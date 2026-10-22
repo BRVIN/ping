@@ -1,19 +1,7 @@
 #include "../includes/ft_ping.h"
 
-/*
-** Debug helper: dumps one packet exactly as recvfrom() returned it, cut in
-** its three parts, each shown as raw bytes then decoded:
-**
-**   +----------------------+------------+--------------------------+
-**   | IP header (ihl * 4)  | ICMP hdr 8 | ICMP data (the rest)     |
-**   +----------------------+------------+--------------------------+
-**
-** Offsets on the left are counted from the first byte of the packet.
-*/
-
 #define DUMP_WIDTH	16
 
-/* Hex dump of pkt[start .. start + len - 1]: offset | 16 hex bytes | ASCII */
 static void	print_rows(unsigned char *pkt, int start, int len)
 {
 	int	row;

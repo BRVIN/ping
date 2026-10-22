@@ -1,22 +1,5 @@
 #include "../includes/ft_ping.h"
 
-/*
-** ICMP errors (Destination Unreachable, Time Exceeded, ...) are sent by a
-** router or host that could not deliver one of our echo requests. They
-** quote the beginning of the packet that failed, so we can tell whether
-** it was ours:
-**
-**   +-------------+-----------+-------------------+-------------------+
-**   | IP header   | ICMP error| quoted IP header  | quoted ICMP header|
-**   | (ip_hlen)   | 8 bytes   | (our request's)   | 8 bytes: our id,  |
-**   |             | type/code |                   | our seq           |
-**   +-------------+-----------+-------------------+-------------------+
-**
-** A message line is printed, then the quoted packet: with -v, or always
-** for Source Quench and Parameter Problem (like inetutils). Errors never
-** stop the program and are not counted in the statistics.
-*/
-
 typedef struct s_icmp_code
 {
 	int			type;
@@ -24,7 +7,6 @@ typedef struct s_icmp_code
 	const char	*text;
 }	t_icmp_code;
 
-/* Codes 9 and 10 of Dest Unreachable are missing on purpose (as inetutils) */
 static const t_icmp_code	g_codes[] = {
 	{ICMP_DEST_UNREACH, ICMP_NET_UNREACH, "Destination Net Unreachable"},
 	{ICMP_DEST_UNREACH, ICMP_HOST_UNREACH, "Destination Host Unreachable"},
@@ -50,28 +32,17 @@ static const t_icmp_code	g_codes[] = {
 	{ICMP_TIME_EXCEEDED, ICMP_EXC_FRAGTIME, "Frag reassembly time exceeded"},
 };
 
-/*
-** The error is ours if the quoted packet is an echo request with our id,
-** sent to our target. Also checks that everything we read is inside n.
-*/
-// 
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |      Internet Header + 64 bits of Original Data Datagram      |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// Remember: here we unwrap the IP/ICMP content copied into the real ICMP packet content Data
 static int	is_from_us(t_ping *ping, char *buf, ssize_t n, int ip_hlen)
 {
 	struct iphdr	*orig;
 	struct icmphdr	*orig_icmp;
 	int				orig_hlen;
 
-	// getting the copied ip header from "IH+64" ICMP content
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(struct iphdr))
 		return (0);
 	orig = (struct iphdr *)(buf + ip_hlen + ICMP_HDR_LEN);
 	orig_hlen = orig->ihl * 4;
 
-	// getting the copied ICMP header ...
 	if (n < ip_hlen + ICMP_HDR_LEN + orig_hlen + ICMP_HDR_LEN)
 		return (0);
 	orig_icmp = (struct icmphdr *)((char *)orig + orig_hlen);
@@ -91,7 +62,6 @@ static void	print_code_message(int type, int code, const char *prefix)
 	size_t	i;
 	size_t	g_codes_size;
 
-	/* number of entries in g_codes, computed at compile time */
 	g_codes_size = sizeof(g_codes) / sizeof(g_codes[0]);
 	i = 0;
 	while (i < g_codes_size)
@@ -106,24 +76,6 @@ static void	print_code_message(int type, int code, const char *prefix)
 	printf("%s, Unknown Code: %d\n", prefix, code);
 }
 
-/*
-** Shows the request the error is about, as inetutils does. The first two
-** lines (raw bytes) only with -v. orig is the quoted IP header, already
-** validated by is_from_us.
-**
-** IP Hdr Dump:
-**  4500 0054 3f2e 4000 0101 b1c2 c0a8 7aaf 0808 0808
-** Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src	Dst	Data
-**  4  5  00 0054 3f2e   2 0000  01  01 b1c2 192.168.122.175  8.8.8.8
-** ICMP: type 8, code 0, size 64, id 0x1a2b, seq 0x0000
-**
-** The Data column (IP options) stays empty: our requests have none.
-*/
-
-//  %02x with bytes[i] prints the byte in hexadecimal:
-//- x: hexadecimal, lowercase (af, not AF) - 2: at least 2 characters wide - 0: pad with zeros instead of spaces
-// and put spaces every second iteration : (i % 2) ? " " : ""
-
 static void	print_quoted_packet(struct iphdr *orig, int verbose)
 {
 	unsigned char	*bytes;
@@ -132,7 +84,6 @@ static void	print_quoted_packet(struct iphdr *orig, int verbose)
 	char			dst[INET_ADDRSTRLEN];
 	size_t			i;
 
-	// 1. -v only: raw bytes of the quoted IP header, grouped two by two
 	if (verbose)
 	{
 		bytes = (unsigned char *)orig;
@@ -146,7 +97,6 @@ static void	print_quoted_packet(struct iphdr *orig, int verbose)
 		printf("\n");
 	}
 
-	// 2. the same header, decoded field by field
 	inet_ntop(AF_INET, &orig->saddr, src, sizeof(src));
 	inet_ntop(AF_INET, &orig->daddr, dst, sizeof(dst));
 	printf("Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src\tDst\tData\n");
@@ -156,7 +106,6 @@ static void	print_quoted_packet(struct iphdr *orig, int verbose)
 		ntohs(orig->frag_off) & 0x1fff, orig->ttl, orig->protocol,
 		ntohs(orig->check), src, dst);
 
-	// 3. the quoted ICMP header: always our echo request (is_from_us)
 	orig_icmp = (struct icmphdr *)((char *)orig + orig->ihl * 4);
 	printf("ICMP: type %u, code %u, size %u, id 0x%04x, seq 0x%04x\n",
 		orig_icmp->type, orig_icmp->code,
@@ -164,38 +113,17 @@ static void	print_quoted_packet(struct iphdr *orig, int verbose)
 		ntohs(orig_icmp->un.echo.id), ntohs(orig_icmp->un.echo.sequence));
 }
 
-/*
-** Called by recv_ping for the 5 ICMP error types only: Dest Unreachable,
-** Source Quench, Redirect, Time Exceeded, Parameter Problem.
-*/
-
-// possible ICMP types entering are :
-// [ICMP_DEST_UNREACH] [ICMP_SOURCE_QUENCH] [ICMP_REDIRECT] [ICMP_TIME_EXCEEDED] [ICMP_PARAMETERPROB]
-// they have similar headers, check obs repo
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |     Type      |     Code      |          Checksum             |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |            < different between types >                        |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |      Internet Header + 64 bits of Original Data Datagram      |    ( this line for / dest unreach / time exceed / parameter prob / source quench / redirect)
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
-// the one mentionned " The internet header plus the first 64 bits of the original datagram's data"
-// is_from_us checks it to see if we are the sender
-//
 void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, const char *from_str)
 {
 	struct icmphdr	*icmp;
 
-	// check "IH+64" data to see if we are the sender, ignore if we are not
 	if (!is_from_us(ping, buf, n, ip_hlen))
 		return ;
 	icmp = (struct icmphdr *)(buf + ip_hlen);
-	/* Numeric address only: no reverse DNS on returned packets (subject) */
+
 	printf("%ld bytes from %s: ", (long)(n - ip_hlen), from_str);
 
 	switch(icmp->type) {
-
 		case ICMP_DEST_UNREACH:
 			print_code_message(icmp->type, icmp->code, "Dest Unreachable");
 			break;
@@ -212,7 +140,7 @@ void	handle_icmp_error(t_ping *ping, char *buf, ssize_t n, int ip_hlen, const ch
 			printf("Parameter problem: pointer = %u\n", ((unsigned char *)icmp)[4]);
 			break;
 	}
-	/* Like inetutils: quoted packet always for these two, else only with -v */
+
 	if (ping->verbose || icmp->type == ICMP_SOURCE_QUENCH
 		|| icmp->type == ICMP_PARAMETERPROB)
 		print_quoted_packet((struct iphdr *)(buf + ip_hlen + ICMP_HDR_LEN), ping->verbose);

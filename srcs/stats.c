@@ -9,12 +9,6 @@ static double	ft_abs(double x)
 	return (x);
 }
 
-/*
-** Square root by Newton's method: x <- (x + a / x) / 2 converges to sqrt(a).
-** Same precision rule as inetutils, so the stddev column matches:
-** values below SQRT_PRECISION give 0, and iteration stops once a step
-** changes x by no more than SQRT_PRECISION. (Also avoids linking libm.)
-*/
 static double	ft_sqrt(double a)
 {
 	double	x;
@@ -32,14 +26,6 @@ static double	ft_sqrt(double a)
 	return (next);
 }
 
-/*
-** --- host ping statistics ---
-** N packets transmitted, M packets received, [+D duplicates, ]L% packet loss
-** round-trip min/avg/max/stddev = a/b/c/d ms      (only if replies came back)
-**
-** Loss is an integer division (truncated, like inetutils).
-** Duplicates are not "received", but their RTT counts in the averages.
-*/
 void	print_stats(t_ping *ping)
 {
 	long	total;
