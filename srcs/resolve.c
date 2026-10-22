@@ -67,6 +67,7 @@ int	resolve_host(t_ping *ping)
 	{
 		//fprintf(stderr, "ft_ping: unknown host\n");
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(fred)); //art//
+		fprintf(stderr, "(unknown host)\n"); //art//
 		return (1);
 	}
 	/* Take the first result; it is a sockaddr_in since we asked AF_INET */

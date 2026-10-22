@@ -5,8 +5,6 @@ int	main(int argc, char **argv)
 	t_ping	ping;
 	int		one;
 
-	//setvbuf: to have output always print directly, it's like doing fflush(stdout) after every print
-	//art// pas forcement indispensable, augmente les syscall
 	setvbuf(stdout, NULL, _IOLBF, 0);
 
 	if (argc == 1) {
@@ -36,17 +34,9 @@ int	main(int argc, char **argv)
 	if (ping.sockfd < 0)
 	{
 		fprintf(stderr, "socket: %s\n", strerror(errno));
-		return (64);
-
-		/*
-		// Not root (and no CAP_NET_RAW): same message as inetutils
 		if (errno == EPERM || errno == EACCES)
-			fprintf(stderr, "ft_ping: Failed to create socket\n%s\n", strerror(errno));
-			//fprintf(stderr, "ft_ping: Lacking privilege for icmp socket.\n");
-		else
-			fprintf(stderr, "ft_ping: %s\n", strerror(errno));
-		return (1);
-		*/
+			fprintf(stderr, "(Lacking privilege for icmp socket)\n");
+		return (64);
 	}
 	/* Like inetutils: allow sending to a broadcast address (no effect otherwise) */
 	one = 1;

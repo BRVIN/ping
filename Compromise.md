@@ -160,3 +160,36 @@ options, and the kernel builds their IP header.
 - **The information is the same.** The pointer value appears in both outputs. We only fix how
   it is shown.
 - **It almost never shows**, so in practice our output cannot be told apart from inetutils'.
+
+---
+
+## 4. `recvfrom` error: reported and ignored, never fatal
+
+**What we did.** In `recv_ping` (`srcs/ping.c`), when `recvfrom` fails with anything other than
+`EINTR` (retried) or `EAGAIN` / `EWOULDBLOCK` (nothing to read), ft_ping prints
+`recvfrom: <strerror>` on stderr and returns to the loop. The packet is treated as lost.
+`recv_ping` can therefore never fail, and `ping_loop` only stops on a `sendto` or `select`
+failure.
+
+**inetutils behavior.** `ping_recv()` (`libping.c`) returns -1 on a `recvfrom` error without
+printing anything. `ping_run()` ignores that return value and keeps looping. The user never
+learns that a read failed.
+
+**ft_ping behavior.** Same loop behavior (keep pinging, statistics preserved), plus one error
+line on stderr.
+
+**When it shows.** Practically never. After `select` reported the socket readable, the only
+realistic `recvfrom` failures on a raw ICMP socket are `ENOMEM` / `ENOBUFS` under kernel memory
+pressure. The other documented errors (`EBADF`, `EFAULT`, `EINVAL`...) can only come from a bug
+in our own code. There is no connection and no error queue, so no `ECONNREFUSED`-style errors.
+
+**Why it's acceptable.**
+
+- **Same robustness as inetutils.** A transient kernel error costs one reply, not the whole
+  session: the run goes on and the statistics are still printed at the end.
+- **Better visibility.** inetutils hides the error; we show it, like we already do for
+  `packet too short` and `checksum mismatch`.
+- **Consistent with the send side.** A `sendto` failure stays fatal (as in inetutils), because
+  ping cannot do its job without sending. A single failed read does not prevent it.
+- **Before this change** ft_ping exited with status 1 and no statistics on such an error. That
+  was stricter than the reference, not better: it threw away everything measured so far.

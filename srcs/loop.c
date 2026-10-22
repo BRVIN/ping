@@ -35,7 +35,8 @@ long long	now_us(void)
 **       if the send time is reached (checked on every wake-up, so a stream
 **       of incoming packets can never delay the sends) -> send, reschedule
 **
-** Returns -1 on a fatal error (the caller exits without statistics).
+** Returns -1 on a fatal error: send or select failed (the caller exits
+** without statistics). Receive errors are never fatal.
 */
 int	ping_loop(t_ping *ping)
 {
@@ -87,9 +88,9 @@ int	ping_loop(t_ping *ping)
 			return (-1);
 		}
 
-		//3. RECEIVE PACKET  (if one available)
-		if (ret > 0 && recv_ping(ping))
-			return (-1);
+		//3. RECEIVE PACKET  (if one available), never fatal
+		if (ret > 0)
+			recv_ping(ping);
 
 		//4. SEND PACKET (supposed to always go in with select timeout wait i think)
 		if (now_us() >= next_send)

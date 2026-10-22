@@ -75,7 +75,8 @@ static void	update_rtt(t_ping *ping, double rtt)
 ** A raw ICMP socket receives EVERY ICMP packet arriving on the machine
 ** (other ping processes, errors, ...), so we filter to keep only ours.
 ** Called by the main loop when select() says the socket is readable:
-** handles exactly ONE packet.
+** handles exactly ONE packet. Never fatal: a bad or unreadable packet is
+** reported (or ignored) and the loop goes on.
 **
 ** What recvfrom() gives us on a raw socket:
 **
@@ -105,7 +106,7 @@ static void	update_rtt(t_ping *ping, double rtt)
 // Timestamp / address mask replies answer requests we never send.
 // not errors, someone else ping us or stuff like this
 //
-int	recv_ping(t_ping *ping)
+void	recv_ping(t_ping *ping)
 {
 
 	char buf[1024];
@@ -123,9 +124,13 @@ int	recv_ping(t_ping *ping)
 				continue;
 			// nothing to read
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
-				return (0);
-			fprintf(stderr, "recvfrom: %s\n", strerror(errno)); //art//
-			return (-1);
+				return ;
+			// Any other error (ENOMEM, ENOBUFS...): report it and keep pinging,
+			// the packet is simply lost. inetutils drops it silently; a fatal
+			// exit here would throw away the whole session and its statistics
+			// (see Compromise.md, entry 4).
+			fprintf(stderr, "recvfrom: %s\n", strerror(errno));
+			return ;
 		}
 		break;
 	}
@@ -143,7 +148,7 @@ int	recv_ping(t_ping *ping)
 
 	if (n < ip_hlen + ICMP_HDR_LEN) {
 		fprintf(stderr, "packet too short (%ld bytes) from %s\n", (long)n, from_str);
-		return (0);
+		return ;
 	}
 	struct icmphdr* icmp = (struct icmphdr *)(buf + ip_hlen);
 
@@ -153,14 +158,14 @@ int	recv_ping(t_ping *ping)
 	    icmp->type == ICMP_REDIRECT     || icmp->type == ICMP_TIME_EXCEEDED ||
 	    icmp->type == ICMP_PARAMETERPROB) {
 		handle_icmp_error(ping, buf, n, ip_hlen, from_str);
-		return (0);
+		return ;
 	}
 	/* Requests, other replies, unknown types: not for us */
 	if (icmp->type != ICMP_ECHOREPLY)
-		return (0);
+		return ;
 	/* Echo reply for another process: skip it */
 	if (ntohs(icmp->un.echo.id) != ping->id)
-		return (0);
+		return ;
 
 	if (checksum(icmp, n - ip_hlen) != 0)
 		fprintf(stderr, "checksum mismatch from %s\n", from_str);
@@ -170,7 +175,7 @@ int	recv_ping(t_ping *ping)
 
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent)) {
 		fprintf(stderr, "ft_ping error: packet to short too hold ICMP Data\n");
-		return (0);
+		return ;
 	}
 
 	//3. retrieve our send timestamp and calcul the difference with now 
@@ -192,5 +197,5 @@ int	recv_ping(t_ping *ping)
 	printf("%ld bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms%s\n",
 		(long)(n - ip_hlen), from_str, seq, ip->ttl, rtt,
 		dup ? " (DUP!)" : "");
-	return (0);
+	return ;
 }
