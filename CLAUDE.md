@@ -10,7 +10,7 @@ I made VM so can run the inetutils-2.0 and our ft_ping :
 bully@192.168.122.175
 There is a VM running ping from inetutils-2.0 that you can access through ssh at bully@192.168.122.175 to be able to test ping of inetutils-2.0, don't hesitate to use it.
 2. Our ft_ping
-root@192.168.122.33
+root@192.168.122.32
 In this VM I cloned the current repo (our code) at /root/ping
 
 Don't hesitate to run ft_ping and inetutils-2.0 ping in the 2 VM through ssh and compare their behavior when needed.
