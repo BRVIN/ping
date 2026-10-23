@@ -25,7 +25,7 @@ int	main(int argc, char **argv)
 	ping.sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (ping.sockfd < 0)
 	{
-		fprintf(stderr, "socket: %s\n", strerror(errno));
+		fprintf(stderr, "ft_ping - socket: %s\n", strerror(errno));
 		if (errno == EPERM || errno == EACCES)
 			fprintf(stderr, "(Lacking privilege for icmp socket)\n");
 		return (1);
@@ -34,8 +34,8 @@ int	main(int argc, char **argv)
 	one = 1;
 
 	if (setsockopt(ping.sockfd, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one)) != 0) {
-		fprintf(stderr, "setsockopt: %s\n", strerror(errno));
-		return (64);
+		fprintf(stderr, "ft_ping - setsockopt: %s\n", strerror(errno));
+		return (1);
 	}
 
 	printf("PING %s (%s): %d data bytes", ping.canonname, ping.ip_str, PING_DATA_LEN);

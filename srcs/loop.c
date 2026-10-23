@@ -54,7 +54,7 @@ int	ping_loop(t_ping *ping)
 			if (errno == EINTR)
 				continue ;
 
-			fprintf(stderr, "select: %s\n", strerror(errno));
+			fprintf(stderr, "ft_ping - select: %s\n", strerror(errno));
 
 			return (-1);
 		}

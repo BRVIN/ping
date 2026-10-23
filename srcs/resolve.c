@@ -1,5 +1,4 @@
 #include "../includes/ft_ping.h"
-#include <netdb.h>
 
 int	resolve_host(t_ping *ping)
 {
@@ -18,7 +17,7 @@ int	resolve_host(t_ping *ping)
 	const int ret = getaddrinfo(ping->host, NULL, &hints, &res);
 	if (ret != 0)
 	{
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ret));
+		fprintf(stderr, "ft_ping - getaddrinfo: %s\n", gai_strerror(ret));
 		fprintf(stderr, "(unknown host)\n");
 		return (1);
 	}
@@ -33,7 +32,7 @@ int	resolve_host(t_ping *ping)
 	freeaddrinfo(res);
 
 	if (!inet_ntop(AF_INET, &ping->sockaddr.sin_addr, ping->ip_str, sizeof(ping->ip_str))) {
-		fprintf(stderr, "inet_ntop: %s\n", strerror(errno));
+		fprintf(stderr, "ft_ping - inet_ntop: %s\n", strerror(errno));
 		return (1);
 	}
 

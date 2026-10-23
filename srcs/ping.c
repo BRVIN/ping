@@ -1,8 +1,4 @@
 #include "../includes/ft_ping.h"
-#include <asm-generic/errno-base.h>
-#include <asm-generic/errno.h>
-#include <math.h>
-#include <netdb.h>
 
 static void	dup_clear(t_ping *ping, int seq)
 {
@@ -29,12 +25,12 @@ int	send_ping(t_ping *ping)
 		if (n < 0) {
 			if (errno == EINTR)
 				continue;
-			fprintf(stderr, "sendto: %s\n", strerror(errno));
+			fprintf(stderr, "ft_ping - sendto: %s\n", strerror(errno));
 			return (-1);
 		}
 
 		if (n != PACKET_LEN) {
-			fprintf(stderr, "sendto: Packet not fully sent");
+			fprintf(stderr, "ft_ping - sendto: Packet not fully sent\n");
 			return (0);
 		}
 		break;
@@ -70,7 +66,7 @@ void	recv_ping(t_ping *ping)
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
 				return ;
 
-			fprintf(stderr, "recvfrom: %s\n", strerror(errno));
+			fprintf(stderr, "ft_ping - recvfrom: %s\n", strerror(errno));
 			return ;
 		}
 		break;
@@ -86,7 +82,7 @@ void	recv_ping(t_ping *ping)
 	(void)inet_ntop(AF_INET, &from.sin_addr, from_str, sizeof(from_str));
 
 	if (n < ip_hlen + ICMP_HDR_LEN) {
-		fprintf(stderr, "packet too short (%ld bytes) from %s\n", (long)n, from_str);
+		fprintf(stderr, "ft_ping: packet too short (%ld bytes) from %s\n", (long)n, from_str);
 		return ;
 	}
 	struct icmphdr* icmp = (struct icmphdr *)(buf + ip_hlen);
@@ -105,12 +101,12 @@ void	recv_ping(t_ping *ping)
 		return ;
 
 	if (checksum(icmp, n - ip_hlen) != 0)
-		fprintf(stderr, "checksum mismatch from %s\n", from_str);
+		fprintf(stderr, "ft_ping: checksum mismatch from %s\n", from_str);
 
 	struct timeval		sent;
 
 	if (n < ip_hlen + ICMP_HDR_LEN + (ssize_t)sizeof(sent)) {
-		fprintf(stderr, "ft_ping error: packet to short too hold ICMP Data\n");
+		fprintf(stderr, "ft_ping: packet too short to hold ICMP Data\n");
 		return ;
 	}
 
