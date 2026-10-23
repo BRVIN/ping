@@ -20,7 +20,7 @@ int	main(int argc, char **argv)
 	ping.id = getpid() & 0xFFFF;
 
 	if (resolve_host(&ping) != 0)
-		return (64);
+		return (1);
 
 	ping.sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (ping.sockfd < 0)
@@ -28,7 +28,7 @@ int	main(int argc, char **argv)
 		fprintf(stderr, "socket: %s\n", strerror(errno));
 		if (errno == EPERM || errno == EACCES)
 			fprintf(stderr, "(Lacking privilege for icmp socket)\n");
-		return (64);
+		return (1);
 	}
 
 	one = 1;
